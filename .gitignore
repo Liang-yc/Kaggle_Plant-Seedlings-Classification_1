@@ -99,3 +99,12 @@ ENV/
 
 # mypy
 .mypy_cache/
+/raw_dataset
+/.idea/Kaggle_Plant-Seedlings-Classification_1.iml
+/.idea/inspectionProfiles/Project_Default.xml
+/.idea/misc.xml
+/.idea/modules.xml
+/.idea/vcs.xml
+/.idea/workspace.xml
+/gen_dataset/raw_data_train.config
+/gen_dataset/raw_data_train.config.tfrecord

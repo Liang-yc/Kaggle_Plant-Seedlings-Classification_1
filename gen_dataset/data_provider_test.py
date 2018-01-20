@@ -14,8 +14,8 @@ TEST_CONFIG = {
     'name': 'test',
     'training_size': 1000,
     'test_size': 1000,
-    'pattern_training_set': 'raw_data_train.config.tfrecord',
-    'pattern_test_set': 'raw_data_train.config.tfrecord',
+    'pattern_training_set': 'plant.config.train.tfrecord',
+    'pattern_test_set': 'plant.config.test.tfrecord',
     'image_shape': (256, 256, 3),
     'items_to_descriptions': {''}
 }
@@ -43,7 +43,7 @@ def test():
                 # => uint8
                 image = (((image + 1) / 2) * 255).astype(np.uint8)
                 im = Image.fromarray(image)
-                im.save("{0}_{1}_plant.jpg".format(i, labels[j]))
+                im.save("{0}_{1}_{2}_plant.jpg".format(i, j, labels[j]))
 
         print("thread.join")
         coord.request_stop()

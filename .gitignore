@@ -108,3 +108,9 @@ ENV/
 /.idea/workspace.xml
 /gen_dataset/raw_data_train.config
 /gen_dataset/raw_data_train.config.tfrecord
+.idea/*
+.DS_Store
+gen_dataset/.DS_Store
+gen_dataset/plant.config
+gen_dataset/plant.config.test.tfrecord
+gen_dataset/plant.config.train.tfrecord

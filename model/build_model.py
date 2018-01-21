@@ -65,7 +65,7 @@ def build_simple_cnn(image_batch):
         )
 
         to_next_layer = tf.layers.conv2d(
-            inputs=image_batch,
+            inputs=to_next_layer,
             filters=32,
             kernel_size=2,
             strides=(1, 1),

@@ -105,7 +105,7 @@ def gen_dataset(input_config_filename):
     print("total sample count:{0}".format(total_sample_count))
     train_sample_count = int(total_sample_count * 0.8)
     print("train sample count:{0}".format(train_sample_count))
-    print("train sample count:{0}".format(total_sample_count - train_sample_count))
+    print("test sample count:{0}".format(total_sample_count - train_sample_count))
 
     train_writer = tf.python_io.TFRecordWriter(
         os.path.basename(input_config_filename) + ".train.tfrecord")

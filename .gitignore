@@ -114,3 +114,4 @@ gen_dataset/.DS_Store
 gen_dataset/plant.config
 gen_dataset/plant.config.test.tfrecord
 gen_dataset/plant.config.train.tfrecord
+model_weight

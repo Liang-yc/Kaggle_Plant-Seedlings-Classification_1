@@ -38,6 +38,9 @@ def test():
 
             images, labels = session.run([face_batch, label_batch])
 
+            print(labels.shape)
+            print(images.shape)
+
             for j, image in enumerate(images):
                 # image [-1, +1] float32
                 # => uint8

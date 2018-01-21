@@ -16,7 +16,7 @@ from tensorflow.python.platform import gfile
 
 DEFAULT_DATASET_DIR = os.path.join(os.path.dirname(__file__), '../dataset')
 DEFAULT_CONFIG = {
-    'name': 'celeba',
+    'name': 'default',
     'training_size': 90000,
     'test_size': 900,
     'pattern_training_set': 'training*.tfrecord',
@@ -178,7 +178,7 @@ def config_to_prefetch_queue(config=None, dataset_dir=None, batch_size=64):
 
     shuffle_config = DEFAULT_SHUFFLE_CONFIG
 
-    image_train, label_train = _read_and_decode(config['pattern_training_set'],
+    image_train, label_train = _read_and_decode(os.path.join(dataset_dir, config['pattern_training_set']),
                                                 3, config['image_shape'][0:2])
 
     image_train_batch, label_train_batch = tf.train.shuffle_batch(
@@ -191,7 +191,7 @@ def config_to_prefetch_queue(config=None, dataset_dir=None, batch_size=64):
     train_queue = slim.prefetch_queue.prefetch_queue(
         [image_train_batch, label_train_batch])
 
-    image_test, label_test = _read_and_decode(config['pattern_test_set'], 3,
+    image_test, label_test = _read_and_decode(os.path.join(dataset_dir, config['pattern_test_set']), 3,
                                               config['image_shape'][0:2])
 
     image_test_batch, label_test_batch = tf.train.batch(

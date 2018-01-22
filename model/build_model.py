@@ -11,6 +11,9 @@ import tensorflow as tf
 from tensorflow.python.framework import ops
 from tensorflow.python.ops import clip_ops
 
+import model.bn_cnn_4
+
+
 def add_gradients_summaries(grads_and_vars):
     """Add summaries to gradients.
     Args:
@@ -29,11 +32,12 @@ def add_gradients_summaries(grads_and_vars):
                 tf.summary.histogram(var.op.name + '_gradient', grad_values))
             summaries.append(
                 tf.summary.scalar(var.op.name + '_gradient_norm',
-                               clip_ops.global_norm([grad_values])))
+                                  clip_ops.global_norm([grad_values])))
         else:
             logging.info('Var %s has no gradient', var.op.name)
 
     return summaries
+
 
 def build_simple_cnn(image_batch):
     """
@@ -41,7 +45,6 @@ def build_simple_cnn(image_batch):
     :param image_batch:
     :return:
     """
-    slim = tf.contrib.slim
     scope_name = "simple_cnn"
 
     with tf.variable_scope(scope_name):
@@ -53,16 +56,14 @@ def build_simple_cnn(image_batch):
             strides=(1, 1),
             padding='same',
             activation=tf.nn.leaky_relu,
-            name='conv_1'
-        )
+            name='conv_1')
 
         to_next_layer = tf.layers.max_pooling2d(
             inputs=to_next_layer,
             pool_size=2,
             strides=1,
             padding='same',
-            name='pool_1'
-        )
+            name='pool_1')
 
         to_next_layer = tf.layers.conv2d(
             inputs=to_next_layer,
@@ -71,16 +72,14 @@ def build_simple_cnn(image_batch):
             strides=(1, 1),
             padding='same',
             activation=tf.nn.leaky_relu,
-            name='conv_2'
-        )
+            name='conv_2')
 
         to_next_layer = tf.layers.max_pooling2d(
             inputs=to_next_layer,
             pool_size=2,
             strides=1,
             padding='same',
-            name='pool_2'
-        )
+            name='pool_2')
 
         flatten = tf.layers.flatten(to_next_layer, name='flatten')
 
@@ -104,13 +103,37 @@ def build_classifier(image_batch, num_class):
 
     return linear, logits, tf.trainable_variables(scope_name)
 
+
+def build_cnn_4_classifier(image_batch, num_class, training):
+    """
+
+    :param image_batch:
+    :param num_class:
+    :param training:
+    :return:
+    """
+
+    scope_name = "plant_seedings_cnn_4_classifier"
+
+    with tf.variable_scope(scope_name):
+        flatten = model.bn_cnn_4.build_bn_cnn_4(image_batch, training)
+
+        linear = tf.layers.dense(flatten, num_class, name='fc')
+
+        logits = tf.nn.softmax(linear, name='softmax')
+
+    return linear, logits, tf.trainable_variables(scope_name)
+
+
 def build_loss(sparse_labels, unscaled_logits):
     reg_loss = tf.reduce_sum(tf.losses.get_regularization_losses())
 
-    ce = tf.reduce_mean(tf.losses.sparse_softmax_cross_entropy(
-        sparse_labels, unscaled_logits, scope='softmax_cross_entropy_loss'))
+    ce = tf.reduce_mean(
+        tf.losses.sparse_softmax_cross_entropy(
+            sparse_labels, unscaled_logits, scope='softmax_cross_entropy_loss'))
 
     return reg_loss + ce
+
 
 def build_train_op(loss, trainable, global_step):
     """

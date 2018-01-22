@@ -66,8 +66,8 @@ def gen_sample(label, image_path):
         features=tf.train.Features(
             feature={
                 'image_plant/format':
-                    #bytes_feature(bytes("png", encoding="utf-8")),
-                    bytes_feature("png"),
+                    bytes_feature(bytes("png", encoding="utf-8")),
+                #bytes_feature("png"),
                 'image_plant/encoded':
                     bytes_feature(face_file_content),
                 'label':
@@ -105,7 +105,8 @@ def gen_dataset(input_config_filename):
     print("total sample count:{0}".format(total_sample_count))
     train_sample_count = int(total_sample_count * 0.8)
     print("train sample count:{0}".format(train_sample_count))
-    print("test sample count:{0}".format(total_sample_count - train_sample_count))
+    print(
+        "test sample count:{0}".format(total_sample_count - train_sample_count))
 
     train_writer = tf.python_io.TFRecordWriter(
         os.path.basename(input_config_filename) + ".train.tfrecord")
@@ -120,5 +121,6 @@ def gen_dataset(input_config_filename):
         sample = gen_sample(s[0], s[1])
         test_writer.write(sample.SerializeToString())
     test_writer.close()
+
 
 gen_dataset(args.input_config)

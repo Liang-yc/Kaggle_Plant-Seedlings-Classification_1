@@ -11,7 +11,7 @@ import tensorflow as tf
 from tensorflow.python.framework import ops
 from tensorflow.python.ops import clip_ops
 
-import model.bn_cnn_4
+import model.bn_cnn
 
 
 def add_gradients_summaries(grads_and_vars):
@@ -116,7 +116,28 @@ def build_cnn_4_classifier(image_batch, num_class, training):
     scope_name = "plant_seedings_cnn_4_classifier"
 
     with tf.variable_scope(scope_name):
-        flatten = model.bn_cnn_4.build_bn_cnn_4(image_batch, training)
+        flatten = model.bn_cnn.build_bn_cnn_4(image_batch, training)
+
+        linear = tf.layers.dense(flatten, num_class, name='fc')
+
+        logits = tf.nn.softmax(linear, name='softmax')
+
+    return linear, logits, tf.trainable_variables(scope_name)
+
+
+def build_cnn_6_classifier(image_batch, num_class, training):
+    """
+
+    :param image_batch:
+    :param num_class:
+    :param training:
+    :return:
+    """
+
+    scope_name = "plant_seedings_cnn_4_classifier"
+
+    with tf.variable_scope(scope_name):
+        flatten = model.bn_cnn.build_bn_cnn_6(image_batch, training)
 
         linear = tf.layers.dense(flatten, num_class, name='fc')
 

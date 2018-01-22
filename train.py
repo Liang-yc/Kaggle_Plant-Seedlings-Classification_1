@@ -139,7 +139,7 @@ def train():
                     feed_dict={
                         x: images,
                         y: labels,
-                        training: True
+                        training: False
                     })
                 test_accuracy_avg = test_accuracy_avg + (
                     accuracy_value[0] - test_accuracy_avg) / (

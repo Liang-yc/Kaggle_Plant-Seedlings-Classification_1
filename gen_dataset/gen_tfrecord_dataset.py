@@ -31,7 +31,7 @@ parser.add_argument(
     9\t./raw_dataset/train/Shepherds Purse
     10\t./raw_dataset/train/Small-flowered Cranesbill
     11\t./raw_dataset/train/Sugar beet
-    
+
 """
 args = parser.parse_args()
 
@@ -111,10 +111,14 @@ def gen_dataset(input_config_filename):
         os.path.basename(input_config_filename) + ".train.tfrecord")
     test_writer = tf.python_io.TFRecordWriter(
         os.path.basename(input_config_filename) + ".test.tfrecord")
-    for s in sample_source:
+    for s in sample_source[:train_sample_count]:
         sample = gen_sample(s[0], s[1])
         train_writer.write(sample.SerializeToString())
     train_writer.close()
 
+    for s in sample_source[train_sample_count:]:
+        sample = gen_sample(s[0], s[1])
+        test_writer.write(sample.SerializeToString())
+    test_writer.close()
 
 gen_dataset(args.input_config)

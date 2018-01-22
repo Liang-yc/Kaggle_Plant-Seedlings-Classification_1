@@ -5,6 +5,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import math
 import os
 import sys
 
@@ -33,15 +34,19 @@ def train():
         TRAIN_CONFIG, './gen_dataset', batch_size=BATCH_SIZE)
 
     image_batch, label_batch = train_queue.dequeue()
+    test_image_batch, test_label_batch = test_queue.dequeue()
+
+    x = tf.placeholder(tf.float32, shape=(None, 256, 256, 3))
+    y = tf.placeholder(tf.int64, shape=(None))
 
     # [-1, +1] => [0, +1]
     image_to_summary = (image_batch + 1) / 2
     tf.summary.image('plant', image_to_summary, max_outputs=8)
 
     linear, logits, trainable_var = build_model.build_classifier(
-        image_batch, NUM_CLASS)
+        x, NUM_CLASS)
 
-    loss = build_model.build_loss(label_batch, linear)
+    loss = build_model.build_loss(y, linear)
     tf.summary.scalar("total_loss", loss)
 
     global_step = tf.train.create_global_step()
@@ -50,11 +55,11 @@ def train():
     for var in tf.global_variables():
         tf.summary.histogram(var.op.name, var)
 
-    correct_prediction = tf.equal(tf.squeeze(label_batch), tf.argmax(linear, 1))
+    correct_prediction = tf.equal(tf.squeeze(y), tf.argmax(linear, 1))
     accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
     tf.summary.scalar('batch_accuracy', accuracy)
-    confusion_matrix_op = tf.confusion_matrix(tf.squeeze(label_batch),
-                                              tf.argmax(linear, 1))
+    #confusion_matrix_op = tf.confusion_matrix(tf.squeeze(y),
+    #                                          tf.argmax(linear, 1))
 
     session_config = tf.ConfigProto()
     session_config.gpu_options.allow_growth = True
@@ -76,33 +81,50 @@ def train():
 
         # epoch
         for i in range(NUM_EPOCH):
-            confusion_matrix = np.zeros((NUM_CLASS, NUM_CLASS))
+            #confusion_matrix = np.zeros((NUM_CLASS, NUM_CLASS))
             accuracy_avg = 0.0
+            test_accuracy_avg = 0.0
 
-            for j in range(10):
+            for j in range(int(math.ceil(TRAIN_CONFIG['training_size'] / BATCH_SIZE))):
+                images, labels = session.run([image_batch, label_batch])
                 if j == 0:
-                    step, summary, loss_value, accuracy_value, confusion, _ = session.run(
-                        [global_step, merge_summary, loss, accuracy, confusion_matrix_op,
-                         train_op])
+                    #step, summary, loss_value, accuracy_value, confusion, _ = session.run(
+                    #    [global_step, merge_summary, loss, accuracy, confusion_matrix_op,
+                    #     train_op])
+                    step, summary, loss_value, accuracy_value, _ = session.run(
+                        [global_step, merge_summary, loss, accuracy,
+                         train_op], feed_dict={x: images, y: labels})
                     summary_writer.add_summary(summary, step)
                 else:
-                    loss_value, accuracy_value, confusion, _ = session.run(
-                        [loss, accuracy, confusion_matrix_op, train_op])
+                    #loss_value, accuracy_value, confusion, _ = session.run(
+                    #    [loss, accuracy, confusion_matrix_op, train_op])
+                    loss_value, accuracy_value, _ = session.run(
+                        [loss, accuracy, train_op], feed_dict={x: images, y: labels})
 
-                confusion_matrix = confusion_matrix + confusion
+                #confusion_matrix = confusion_matrix + confusion
                 accuracy_avg = accuracy_avg + (
                                               accuracy_value - accuracy_avg) / (
                                               j + 1)
                 sys.stdout.write(
-                    "\r{0}--{1} training accuracy(ma):{2}    ".format(i, j,
-                                                                      accuracy_avg))
+                    "\r{0}--{1} training loss:{2}    ".format(i, j,
+                                                                      loss_value))
                 sys.stdout.flush()
 
             print("")
-            print(confusion_matrix)
+            print("training acc:{0}".format(accuracy_avg))
+            #print(confusion_matrix)
 
             model_saver.save(session, os.path.join(save_path, "plant_seedings_classifier.ckpt"),
                        global_step=global_step)
+
+            for k in range(int(math.ceil(TRAIN_CONFIG['test_size'] / BATCH_SIZE))):
+                images, labels = session.run([test_image_batch, test_label_batch])
+                accuracy_value = session.run(
+                    [accuracy], feed_dict={x: images, y: labels})
+                test_accuracy_avg = test_accuracy_avg + (
+                                              accuracy_value[0] - test_accuracy_avg) / (
+                                              k + 1)
+            print("test acc:{0}".format(test_accuracy_avg))
 
         print("thread.join")
         coord.request_stop()

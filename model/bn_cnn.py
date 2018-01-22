@@ -14,15 +14,15 @@ def build_bn_cnn_4(image_batch, training):
 
     with tf.variable_scope(scope_name):
 
-        to_next_layer = build_cnn_bn_pool_layer(image_batch, training, 1)[0]
+        to_next_layer = build_cnn_bn_pool_layer(image_batch, training, 1, bn_momentum=0.9)[0]
 
-        to_next_layer = build_cnn_bn_pool_layer(to_next_layer, training, 2)[0]
-
-        to_next_layer = build_cnn_bn_pool_layer(
-            to_next_layer, training, 3, num_filter=64)[0]
+        to_next_layer = build_cnn_bn_pool_layer(to_next_layer, training, 2, bn_momentum=0.9)[0]
 
         to_next_layer = build_cnn_bn_pool_layer(
-            to_next_layer, training, 4, num_filter=64)[0]
+            to_next_layer, training, 3, num_filter=64, bn_momentum=0.9)[0]
+
+        to_next_layer = build_cnn_bn_pool_layer(
+            to_next_layer, training, 4, num_filter=64, bn_momentum=0.9)[0]
 
         flatten = tf.layers.flatten(to_next_layer, name='flatten')
 
@@ -39,21 +39,21 @@ def build_bn_cnn_6(image_batch, training):
 
     with tf.variable_scope(scope_name):
 
-        to_next_layer = build_cnn_bn_pool_layer(image_batch, training, 1)[0]
+        to_next_layer = build_cnn_bn_pool_layer(image_batch, training, 1, bn_momentum=0.9)[0]
 
-        to_next_layer = build_cnn_bn_pool_layer(to_next_layer, training, 2)[0]
-
-        to_next_layer = build_cnn_bn_pool_layer(
-            to_next_layer, training, 3, num_filter=64)[0]
+        to_next_layer = build_cnn_bn_pool_layer(to_next_layer, training, 2, bn_momentum=0.9)[0]
 
         to_next_layer = build_cnn_bn_pool_layer(
-            to_next_layer, training, 4, num_filter=64)[0]
+            to_next_layer, training, 3, num_filter=64, bn_momentum=0.9)[0]
 
         to_next_layer = build_cnn_bn_pool_layer(
-            to_next_layer, training, 5, num_filter=128)[0]
+            to_next_layer, training, 4, num_filter=64, bn_momentum=0.9)[0]
 
         to_next_layer = build_cnn_bn_pool_layer(
-            to_next_layer, training, 6, num_filter=256)[0]
+            to_next_layer, training, 5, num_filter=128, bn_momentum=0.9)[0]
+
+        to_next_layer = build_cnn_bn_pool_layer(
+            to_next_layer, training, 6, num_filter=256, bn_momentum=0.9)[0]
 
         flatten = tf.layers.flatten(to_next_layer, name='flatten')
 

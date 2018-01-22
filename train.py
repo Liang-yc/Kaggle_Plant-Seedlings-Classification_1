@@ -37,8 +37,8 @@ def train():
     image_batch, label_batch = train_queue.dequeue()
     test_image_batch, test_label_batch = test_queue.dequeue()
 
-    x = tf.placeholder(tf.float32, shape=(None, 256, 256, 3))
-    y = tf.placeholder(tf.int64, shape=(None))
+    x = tf.placeholder(tf.float32, shape=(None, 256, 256, 3), name='x')
+    y = tf.placeholder(tf.int64, shape=(None), name='y')
     training = tf.placeholder(tf.bool, name='phase')
 
     # [-1, +1] => [0, +1]

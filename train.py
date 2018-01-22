@@ -45,7 +45,7 @@ def train():
     image_to_summary = (image_batch + 1) / 2
     tf.summary.image('plant', image_to_summary, max_outputs=8)
 
-    linear, logits, trainable_var = build_model.build_cnn_6_classifier(
+    linear, logits, trainable_var = build_model.build_cnn_6_with_skip_connection_classifier(
         x, NUM_CLASS, training)
 
     loss = build_model.build_loss(y, linear)

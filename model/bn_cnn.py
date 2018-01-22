@@ -14,17 +14,15 @@ def build_bn_cnn_4(image_batch, training):
 
     with tf.variable_scope(scope_name):
 
-        to_next_layer = build_cnn_bn_pool_layer(
-            image_batch, training, 1, bn_momentum=0.9)[0]
+        to_next_layer = build_cnn_bn_pool_layer(image_batch, training, 1)[0]
+
+        to_next_layer = build_cnn_bn_pool_layer(to_next_layer, training, 2)[0]
 
         to_next_layer = build_cnn_bn_pool_layer(
-            to_next_layer, training, 2, bn_momentum=0.9)[0]
+            to_next_layer, training, 3, num_filter=64)[0]
 
         to_next_layer = build_cnn_bn_pool_layer(
-            to_next_layer, training, 3, num_filter=64, bn_momentum=0.9)[0]
-
-        to_next_layer = build_cnn_bn_pool_layer(
-            to_next_layer, training, 4, num_filter=64, bn_momentum=0.9)[0]
+            to_next_layer, training, 4, num_filter=64)[0]
 
         flatten = tf.layers.flatten(to_next_layer, name='flatten')
 
@@ -41,23 +39,79 @@ def build_bn_cnn_6(image_batch, training):
 
     with tf.variable_scope(scope_name):
 
-        to_next_layer = build_cnn_bn_pool_layer(
-            image_batch, training, 1, bn_momentum=0.9)[0]
+        # 128 x 128 x 32
+        to_next_layer = build_cnn_bn_pool_layer(image_batch, training, 1)[0]
 
-        to_next_layer = build_cnn_bn_pool_layer(
-            to_next_layer, training, 2, bn_momentum=0.9)[0]
+        # 64 x 64 x 32
+        to_next_layer = build_cnn_bn_pool_layer(to_next_layer, training, 2)[0]
 
+        # 32 x 32 x 64
         to_next_layer = build_cnn_bn_pool_layer(
-            to_next_layer, training, 3, num_filter=64, bn_momentum=0.9)[0]
+            to_next_layer, training, 3, num_filter=64)[0]
 
+        # 16 x 16 x 64
         to_next_layer = build_cnn_bn_pool_layer(
-            to_next_layer, training, 4, num_filter=64, bn_momentum=0.9)[0]
+            to_next_layer, training, 4, num_filter=64)[0]
 
+        # 8 x 8 x 128
         to_next_layer = build_cnn_bn_pool_layer(
-            to_next_layer, training, 5, num_filter=128, bn_momentum=0.9)[0]
+            to_next_layer, training, 5, num_filter=128)[0]
 
+        # 4 x 4 x 256
         to_next_layer = build_cnn_bn_pool_layer(
             to_next_layer, training, 6, num_filter=256, bn_momentum=0.9)[0]
+
+        flatten = tf.layers.flatten(to_next_layer, name='flatten')
+
+    return flatten
+
+
+def build_bn_cnn_6_with_skip_connection(image_batch, training):
+    """
+
+    :param image_batch:
+    :return:
+    """
+    scope_name = 'bn_cnn_6_with_skip_connection'
+
+    with tf.variable_scope(scope_name):
+
+        # 128 x 128 x 32
+        to_next_layer = build_cnn_bn_pool_layer(image_batch, training, 1)[0]
+
+        # 64 x 64 x 32
+        to_next_layer = build_cnn_bn_pool_layer(to_next_layer, training, 2)[0]
+
+        # 32 x 32 x 64
+        cnn_3 = build_cnn_bn_pool_layer(
+            to_next_layer, training, 3, num_filter=64)[0]
+
+        # 16 x 16 x 64
+        to_next_layer, before_pooling_4, _, _ = build_cnn_bn_pool_layer(
+            cnn_3, training, 4, num_filter=64, swap_pooling_pos=False)
+
+        # 8 x 8 x 128
+        to_next_layer, before_pooling_5, _, _ = build_cnn_bn_pool_layer(
+            to_next_layer, training, 5, num_filter=128, swap_pooling_pos=False)
+
+        # 4 x 4 x 256
+        _, before_pooling_6, _, _ = build_cnn_bn_pool_layer(
+            to_next_layer, training, 6, num_filter=256, swap_pooling_pos=False)
+
+        resized_5 = tf.image.resize_images(
+            before_pooling_5, [cnn_3.shape[1], cnn_3.shape[2]],
+            method=tf.image.ResizeMethod.NEAREST_NEIGHBOR)
+
+        resized_6 = tf.image.resize_images(
+            before_pooling_6, [cnn_3.shape[1], cnn_3.shape[2]],
+            method=tf.image.ResizeMethod.NEAREST_NEIGHBOR)
+
+        feature = tf.concat(
+            [cnn_3, before_pooling_4, resized_5, resized_6],
+            axis=3,
+            name='skip_concat')
+
+        to_next_layer = build_cnn_bn_pool_layer(feature, training, 7)[0]
 
         flatten = tf.layers.flatten(to_next_layer, name='flatten')
 
@@ -70,9 +124,10 @@ def build_cnn_bn_pool_layer(image_batch,
                             num_filter=32,
                             kernel_size=2,
                             strides=(1, 1),
-                            bn_momentum=0.99,
+                            bn_momentum=0.9,
                             pool_size=2,
-                            pool_strides=2):
+                            pool_strides=2,
+                            swap_pooling_pos=True):
     """
     cnn -> bn -> max_pooling -> leaky_relu
     note:
@@ -107,13 +162,25 @@ def build_cnn_bn_pool_layer(image_batch,
     bn_out = tf.layers.batch_normalization(
         cnn_out, momentum=bn_momentum, training=training, name=bn_name)
 
-    pooling_out = tf.layers.max_pooling2d(
-        inputs=bn_out,
-        pool_size=pool_size,
-        strides=pool_strides,
-        padding='same',
-        name=pool_name)
+    if swap_pooling_pos:
+        pooling_out = tf.layers.max_pooling2d(
+            inputs=bn_out,
+            pool_size=pool_size,
+            strides=pool_strides,
+            padding='same',
+            name=pool_name)
 
-    activation_out = tf.nn.leaky_relu(pooling_out, name=activation_name)
+        activation_out = tf.nn.leaky_relu(pooling_out, name=activation_name)
 
-    return activation_out, pooling_out, bn_out, cnn_out
+        return activation_out, pooling_out, bn_out, cnn_out
+    else:
+        activation_out = tf.nn.leaky_relu(bn_out, name=activation_name)
+
+        pooling_out = tf.layers.max_pooling2d(
+            inputs=activation_out,
+            pool_size=pool_size,
+            strides=pool_strides,
+            padding='same',
+            name=pool_name)
+
+        return pooling_out, activation_out, bn_out, cnn_out

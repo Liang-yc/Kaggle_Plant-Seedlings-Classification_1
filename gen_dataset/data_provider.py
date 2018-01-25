@@ -162,7 +162,7 @@ def _read_and_decode(tfrecord_file_pattern, channel_num, image_size):
     return img, features['label']
 
 
-def config_to_prefetch_queue(config=None, dataset_dir=None, batch_size=64):
+def config_to_prefetch_queue(config=None, dataset_dir=None, batch_size=64, random_flip_rot_train=False):
     """
     read var size image saved in tfrecord, and resize it to config.image_shape
     :param config:
@@ -181,6 +181,13 @@ def config_to_prefetch_queue(config=None, dataset_dir=None, batch_size=64):
     image_train, label_train = _read_and_decode(
         os.path.join(dataset_dir, config['pattern_training_set']), 3,
         config['image_shape'][0:2])
+
+    if random_flip_rot_train:
+        image_train = tf.image.random_flip_up_down(image_train)
+        image_train = tf.image.random_flip_left_right(image_train)
+
+        k = tf.random_uniform([1], 1, 5, tf.int32)
+        image_train = tf.image.rot90(image_train, k[0])
 
     image_train_batch, label_train_batch = tf.train.shuffle_batch(
         [image_train, label_train],

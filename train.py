@@ -25,7 +25,7 @@ TRAIN_CONFIG = {
     'items_to_descriptions': {''}
 }
 
-BATCH_SIZE = 64
+BATCH_SIZE = 32
 NUM_CLASS = 12
 NUM_EPOCH = 40
 
@@ -37,15 +37,15 @@ def train():
     image_batch, label_batch = train_queue.dequeue()
     test_image_batch, test_label_batch = test_queue.dequeue()
 
-    x = tf.placeholder(tf.float32, shape=(None, 256, 256, 3), name='x')
-    y = tf.placeholder(tf.int64, shape=(None), name='y')
+    x = tf.placeholder(tf.float32, shape=(BATCH_SIZE, 256, 256, 3), name='x')
+    y = tf.placeholder(tf.int64, shape=(BATCH_SIZE), name='y')
     training = tf.placeholder(tf.bool, name='phase')
 
     # [-1, +1] => [0, +1]
     image_to_summary = (image_batch + 1) / 2
     tf.summary.image('plant', image_to_summary, max_outputs=8)
 
-    linear, logits, trainable_var = build_model.build_cnn_8_crelu_classifier(
+    linear, logits, trainable_var = build_model.build_cnn_8_crelu_deformable_classifier(
         x, NUM_CLASS, training)
 
     loss = build_model.build_loss(y, linear)

@@ -200,7 +200,8 @@ def build_cnn_8_crelu_deformable_classifier(image_batch, num_class, training):
     scope_name = "plant_seedings_cnn_8_crelu_deformable_classifier"
 
     with tf.variable_scope(scope_name):
-        flatten = model.bn_cnn.build_bn_cnn_8_crelu_deformable(image_batch, training)
+        flatten = model.bn_cnn.build_bn_cnn_8_crelu_deformable(
+            image_batch, training)
 
         linear = tf.layers.dense(flatten, num_class, name='fc')
 

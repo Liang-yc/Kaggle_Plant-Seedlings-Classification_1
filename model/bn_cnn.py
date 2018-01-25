@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import tensorflow as tf
-from model.deformable_conv2d import build_deformable_conv2d_layer
+from model.deformable_conv2d import build_deformable_conv2d_layer, build_deformable_conv2d_layer_2
 
 
 def build_bn_cnn_4(image_batch, training):
@@ -120,7 +120,7 @@ def build_bn_cnn_8_crelu_deformable(image_batch, training):
         :param image_batch:
         :return:
         """
-    scope_name = 'bn_cnn_8_crelu'
+    scope_name = 'bn_cnn_8_crelu_deformable'
 
     with tf.variable_scope(scope_name):
         # 128 x 128 x 64 (crelu)
@@ -139,10 +139,12 @@ def build_bn_cnn_8_crelu_deformable(image_batch, training):
         # 32 x 32 x 128
         #to_next_layer = build_cnn_bn_pool_layer(
         #    to_next_layer, training, 3, num_filter=128)[0]
-        to_next_layer = build_deformable_conv2d_layer(to_next_layer, training, 3, num_filter=128)
+        to_next_layer = build_deformable_conv2d_layer_2(
+            to_next_layer, training, 3, num_filter=128)
 
         # 16 x 16 x 128
-        to_next_layer = build_deformable_conv2d_layer(to_next_layer, training, 4, num_filter=128)
+        to_next_layer = build_deformable_conv2d_layer_2(
+            to_next_layer, training, 4, num_filter=128)
 
         # 8 x 8 x 256
         to_next_layer = build_cnn_bn_pool_layer(

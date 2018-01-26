@@ -9,7 +9,9 @@ from __future__ import division
 from __future__ import print_function
 
 import collections
+import io
 import os
+from PIL import Image
 import tensorflow as tf
 from tensorflow.contrib import slim
 from tensorflow.python.platform import gfile
@@ -213,3 +215,22 @@ def config_to_prefetch_queue(config=None, dataset_dir=None, batch_size=64, rando
         [image_test_batch, label_test_batch])
 
     return train_queue, test_queue
+
+
+def tfrecord_file_to_nparray(tfrecord_file_name):
+    record_iterator = tf.python_io.tf_record_iterator(tfrecord_file_name)
+
+    result = []
+
+    for record in record_iterator:
+        example = tf.train.Example()
+        example.ParseFromString(record)
+
+        encoded = example.features.feature['image_plant/encoded'].bytes_list.value[0]
+        image = Image.open(io.BytesIO(encoded))
+
+        label = example.features.feature['label'].int64_list.value[0]
+
+        result.append((image, label))
+
+    return result

@@ -38,8 +38,8 @@ def train():
     image_batch, label_batch = train_queue.dequeue()
     test_image_batch, test_label_batch = test_queue.dequeue()
 
-    x = tf.placeholder(tf.float32, shape=(BATCH_SIZE, 256, 256, 3), name='x')
-    y = tf.placeholder(tf.int64, shape=(BATCH_SIZE), name='y')
+    x = tf.placeholder(tf.float32, shape=(None, 256, 256, 3), name='x')
+    y = tf.placeholder(tf.int64, shape=(None), name='y')
     training = tf.placeholder(tf.bool, name='phase')
 
     # [-1, +1] => [0, +1]
@@ -131,20 +131,40 @@ def train():
                 os.path.join(save_path, "plant_seedings_classifier.ckpt"),
                 global_step=global_step)
 
-            for k in range(
-                    int(math.ceil(TRAIN_CONFIG['test_size'] / BATCH_SIZE))):
-                images, labels = session.run(
-                    [test_image_batch, test_label_batch])
+            #for k in range(
+            #        int(math.ceil(TRAIN_CONFIG['test_size'] / BATCH_SIZE))):
+            #    images, labels = session.run(
+            #        [test_image_batch, test_label_batch])
+            #    accuracy_value = session.run(
+            #        [accuracy],
+            #        feed_dict={
+            #            x: images,
+            #            y: labels,
+            #            training: False
+            #        })
+            #    test_accuracy_avg = test_accuracy_avg + (
+            #        accuracy_value[0] - test_accuracy_avg) / (
+            #            k + 1)
+
+            test_data = data_provider.tfrecord_file_to_nparray(
+                './gen_dataset/plant.config.test.tfrecord')
+
+            k = 0
+            for image, label in test_data:
+                image = np.expand_dims(image, axis=0)
                 accuracy_value = session.run(
-                    [accuracy],
-                    feed_dict={
-                        x: images,
-                        y: labels,
-                        training: False
-                    })
+                            [accuracy],
+                            feed_dict={
+                                x: image,
+                                y: label,
+                                training: False
+                            })
+
                 test_accuracy_avg = test_accuracy_avg + (
                     accuracy_value[0] - test_accuracy_avg) / (
                         k + 1)
+                k += 1
+
             print("test acc:{0}".format(test_accuracy_avg))
 
         print("thread.join")

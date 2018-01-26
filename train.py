@@ -25,14 +25,15 @@ TRAIN_CONFIG = {
     'items_to_descriptions': {''}
 }
 
-BATCH_SIZE = 32
+BATCH_SIZE = 64
 NUM_CLASS = 12
-NUM_EPOCH = 40
+NUM_EPOCH = 40 * 16
 
 
 def train():
     train_queue, test_queue = data_provider.config_to_prefetch_queue(
-        TRAIN_CONFIG, './gen_dataset', batch_size=BATCH_SIZE)
+        TRAIN_CONFIG, './gen_dataset', batch_size=BATCH_SIZE,
+        random_flip_rot_train=True)
 
     image_batch, label_batch = train_queue.dequeue()
     test_image_batch, test_label_batch = test_queue.dequeue()
@@ -45,7 +46,7 @@ def train():
     image_to_summary = (image_batch + 1) / 2
     tf.summary.image('plant', image_to_summary, max_outputs=8)
 
-    linear, logits, trainable_var = build_model.build_cnn_8_crelu_deformable_classifier(
+    linear, logits, trainable_var = build_model.build_cnn_8_crelu_classifier(
         x, NUM_CLASS, training)
 
     loss = build_model.build_loss(y, linear)

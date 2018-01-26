@@ -143,8 +143,8 @@ def build_bn_cnn_8_crelu_deformable(image_batch, training):
             to_next_layer, training, 3, num_filter=128)
 
         # 16 x 16 x 128
-        to_next_layer = build_deformable_conv2d_layer_2(
-            to_next_layer, training, 4, num_filter=128)
+        to_next_layer = build_cnn_bn_pool_layer(
+            to_next_layer, training, 4, num_filter=128)[0]
 
         # 8 x 8 x 256
         to_next_layer = build_cnn_bn_pool_layer(

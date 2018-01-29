@@ -10,6 +10,7 @@ from __future__ import print_function
 
 import collections
 import io
+import numpy as np
 import os
 from PIL import Image
 import tensorflow as tf
@@ -217,7 +218,7 @@ def config_to_prefetch_queue(config=None, dataset_dir=None, batch_size=64, rando
     return train_queue, test_queue
 
 
-def tfrecord_file_to_nparray(tfrecord_file_name):
+def tfrecord_file_to_nparray(tfrecord_file_name, image_size):
     record_iterator = tf.python_io.tf_record_iterator(tfrecord_file_name)
 
     result = []
@@ -228,6 +229,8 @@ def tfrecord_file_to_nparray(tfrecord_file_name):
 
         encoded = example.features.feature['image_plant/encoded'].bytes_list.value[0]
         image = Image.open(io.BytesIO(encoded))
+        image = np.array(image.resize(image_size, Image.ANTIALIAS))[:, :, 0:3]
+        image = image * (1.0 / 255) * 2.0 - 1.0  #[-1, +1] float32
 
         label = example.features.feature['label'].int64_list.value[0]
 

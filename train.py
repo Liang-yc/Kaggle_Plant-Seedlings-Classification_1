@@ -25,9 +25,9 @@ TRAIN_CONFIG = {
     'items_to_descriptions': {''}
 }
 
-BATCH_SIZE = 64
+BATCH_SIZE = 96
 NUM_CLASS = 12
-NUM_EPOCH = 40 * 16
+NUM_EPOCH = 80
 
 
 def train():
@@ -74,6 +74,10 @@ def train():
     if not os.path.exists(save_path):
         os.makedirs(save_path)
 
+    test_data = data_provider.tfrecord_file_to_nparray(
+        './gen_dataset/plant.config.test.tfrecord',
+        TRAIN_CONFIG['image_shape'][0:2])
+
     with tf.Session(config=session_config) as session:
         coord = tf.train.Coordinator()
         threads = tf.train.start_queue_runners(coord=coord)
@@ -86,10 +90,9 @@ def train():
         for i in range(NUM_EPOCH):
             #confusion_matrix = np.zeros((NUM_CLASS, NUM_CLASS))
             accuracy_avg = 0.0
-            test_accuracy_avg = 0.0
 
             for j in range(
-                    int(math.ceil(TRAIN_CONFIG['training_size'] / BATCH_SIZE))):
+                    int(math.ceil(TRAIN_CONFIG['training_size'] * 16 / BATCH_SIZE))):
                 images, labels = session.run([image_batch, label_batch])
                 if j == 0:
                     #step, summary, loss_value, accuracy_value, confusion, _ = session.run(
@@ -145,11 +148,10 @@ def train():
             #    test_accuracy_avg = test_accuracy_avg + (
             #        accuracy_value[0] - test_accuracy_avg) / (
             #            k + 1)
-
-            test_data = data_provider.tfrecord_file_to_nparray(
-                './gen_dataset/plant.config.test.tfrecord')
+            #print("prefetch_queue acc", test_accuracy_avg)
 
             k = 0
+            test_accuracy_avg = 0
             for image, label in test_data:
                 image = np.expand_dims(image, axis=0)
                 accuracy_value = session.run(
@@ -159,13 +161,14 @@ def train():
                                 y: label,
                                 training: False
                             })
-
                 test_accuracy_avg = test_accuracy_avg + (
                     accuracy_value[0] - test_accuracy_avg) / (
                         k + 1)
                 k += 1
+                sys.stdout.write("\rtest acc:{0}           ".format(test_accuracy_avg))
+                sys.stdout.flush()
 
-            print("test acc:{0}".format(test_accuracy_avg))
+            print("")
 
         print("thread.join")
         coord.request_stop()

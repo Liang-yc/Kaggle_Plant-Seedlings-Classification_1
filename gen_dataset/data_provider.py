@@ -165,7 +165,10 @@ def _read_and_decode(tfrecord_file_pattern, channel_num, image_size):
     return img, features['label']
 
 
-def config_to_prefetch_queue(config=None, dataset_dir=None, batch_size=64, random_flip_rot_train=False):
+def config_to_prefetch_queue(config=None,
+                             dataset_dir=None,
+                             batch_size=64,
+                             random_flip_rot_train=False):
     """
     read var size image saved in tfrecord, and resize it to config.image_shape
     :param config:
@@ -227,7 +230,8 @@ def tfrecord_file_to_nparray(tfrecord_file_name, image_size):
         example = tf.train.Example()
         example.ParseFromString(record)
 
-        encoded = example.features.feature['image_plant/encoded'].bytes_list.value[0]
+        encoded = example.features.feature[
+            'image_plant/encoded'].bytes_list.value[0]
         image = Image.open(io.BytesIO(encoded))
         image = np.array(image.resize(image_size, Image.ANTIALIAS))[:, :, 0:3]
         image = image * (1.0 / 255) * 2.0 - 1.0  #[-1, +1] float32

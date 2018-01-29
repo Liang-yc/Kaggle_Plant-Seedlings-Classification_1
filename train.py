@@ -9,6 +9,7 @@ import math
 import os
 import sys
 
+import argparse
 import numpy as np
 import tensorflow as tf
 
@@ -25,15 +26,21 @@ TRAIN_CONFIG = {
     'items_to_descriptions': {''}
 }
 
-BATCH_SIZE = 96
 NUM_CLASS = 12
-NUM_EPOCH = 80
-EARLY_STOPPING = 10
+
+parser = argparse.ArgumentParser()
+parser.add_argument("--batch_size", help="fine tune with mobilenet", default=96)
+parser.add_argument("--num_epoch", help="fine tune with mobilenet", default=999)
+parser.add_argument(
+    "--early_stopping_step", help="fine tune with mobilenet", default=10)
+args = parser.parse_args()
 
 
 def train():
     train_queue, test_queue = data_provider.config_to_prefetch_queue(
-        TRAIN_CONFIG, './gen_dataset', batch_size=BATCH_SIZE,
+        TRAIN_CONFIG,
+        './gen_dataset',
+        batch_size=args.batch_size,
         random_flip_rot_train=True)
 
     image_batch, label_batch = train_queue.dequeue()
@@ -75,16 +82,17 @@ def train():
         session.run(tf.global_variables_initializer())
 
         # epoch
-        training_process(accuracy_op, global_step, image_batch, label_batch, is_training,
-                         loss_op, session, train_op, x, y, NUM_EPOCH)
+        training_process(accuracy_op, global_step, image_batch, label_batch,
+                         is_training, loss_op, session, train_op, x, y,
+                         args.num_epoch)
 
         print("thread.join")
         coord.request_stop()
         coord.join(threads)
 
 
-def training_process(accuracy_op, global_step, image_batch, label_batch, is_training,
-                     loss_op, session, train_op, x, y, num_epoch):
+def training_process(accuracy_op, global_step, image_batch, label_batch,
+                     is_training, loss_op, session, train_op, x, y, num_epoch):
 
     best_test_accuracy = 0
 
@@ -108,8 +116,8 @@ def training_process(accuracy_op, global_step, image_batch, label_batch, is_trai
     early_stop_step = 0
     for i in range(num_epoch):
         # confusion_matrix = np.zeros((NUM_CLASS, NUM_CLASS))
-        training_phase(accuracy_op, global_step, i, image_batch, label_batch, is_training,
-                       loss_op, merge_summary, session,
+        training_phase(accuracy_op, global_step, i, image_batch, label_batch,
+                       is_training, loss_op, merge_summary, session,
                        summary_writer, train_op, x, y)
 
         model_saver.save(
@@ -117,20 +125,21 @@ def training_process(accuracy_op, global_step, image_batch, label_batch, is_trai
             os.path.join(save_path, "plant_seedings_classifier.ckpt"),
             global_step=global_step)
 
-        best_acc_updated, best_test_accuracy = test_phase(accuracy_op,
-                                                          best_test_accuracy, is_training, session,
-                                                          test_data, x, y)
+        best_acc_updated, best_test_accuracy = test_phase(
+            accuracy_op, best_test_accuracy, is_training, session, test_data, x,
+            y)
 
         if best_acc_updated:
             early_stop_step = 0
             best_model_saver.save(
                 session,
-                os.path.join(best_model_save_path, "plant_seedings_classifier.ckpt"),
+                os.path.join(best_model_save_path,
+                             "plant_seedings_classifier.ckpt"),
                 global_step=global_step)
         else:
             early_stop_step += 1
 
-        if early_stop_step >= EARLY_STOPPING:
+        if early_stop_step >= args.early_stopping_step:
             print("early stop...")
 
 
@@ -158,19 +167,16 @@ def test_phase(accuracy_op, best_test_accuracy, is_training, session, test_data,
     for image, label in test_data:
         image = np.expand_dims(image, axis=0)
         accuracy_value = session.run(
-            [accuracy_op],
-            feed_dict={
+            [accuracy_op], feed_dict={
                 x: image,
                 y: label,
                 is_training: False
             })
         test_accuracy_avg = test_accuracy_avg + (
-                                                    accuracy_value[
-                                                        0] - test_accuracy_avg) / (
-                                                    k + 1)
+            accuracy_value[0] - test_accuracy_avg) / (
+                k + 1)
         k += 1
-        sys.stdout.write(
-            "\rtest acc:{0}           ".format(test_accuracy_avg))
+        sys.stdout.write("\rtest acc:{0}           ".format(test_accuracy_avg))
         sys.stdout.flush()
     print("")
     if best_test_accuracy < test_accuracy_avg:
@@ -179,21 +185,21 @@ def test_phase(accuracy_op, best_test_accuracy, is_training, session, test_data,
     return False, best_test_accuracy
 
 
-def training_phase(accuracy_op, global_step, epoch, image_batch, label_batch, is_training,
-                   loss_op, merge_summary, session, summary_writer,
+def training_phase(accuracy_op, global_step, epoch, image_batch, label_batch,
+                   is_training, loss_op, merge_summary, session, summary_writer,
                    train_op, x, y):
     accuracy_avg = 0.0
     for j in range(
-            int(math.ceil(TRAIN_CONFIG[
-                              'training_size'] * 16 / BATCH_SIZE))):
+            int(
+                math.ceil(
+                    TRAIN_CONFIG['training_size'] * 16 / args.batch_size))):
         images, labels = session.run([image_batch, label_batch])
         if j == 0:
             # step, summary, loss_value, accuracy_value, confusion, _ = session.run(
             #    [global_step, merge_summary, loss, accuracy, confusion_matrix_op,
             #     train_op])
             step, summary, loss_value, accuracy_value, _ = session.run(
-                [global_step, merge_summary, loss_op, accuracy_op,
-                 train_op],
+                [global_step, merge_summary, loss_op, accuracy_op, train_op],
                 feed_dict={
                     x: images,
                     y: labels,
@@ -212,9 +218,7 @@ def training_phase(accuracy_op, global_step, epoch, image_batch, label_batch, is
                 })
 
         # confusion_matrix = confusion_matrix + confusion
-        accuracy_avg = accuracy_avg + (
-                                          accuracy_value - accuracy_avg) / (
-                                          j + 1)
+        accuracy_avg = accuracy_avg + (accuracy_value - accuracy_avg) / (j + 1)
         sys.stdout.write("\r{0}--{1} training loss:{2}    ".format(
             epoch, j, loss_value))
         sys.stdout.flush()

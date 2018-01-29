@@ -38,14 +38,14 @@ def build_deformable_conv2d_layer(input,
 
 
 def build_deformable_conv2d_layer_2(input,
-                                  training,
-                                  layer_number,
-                                  num_filter=32,
-                                  kernel_size=2,
-                                  bn_momentum=0.9,
-                                  pool_size=2,
-                                  pool_strides=2,
-                                  activation_fn=tf.nn.leaky_relu):
+                                    training,
+                                    layer_number,
+                                    num_filter=32,
+                                    kernel_size=2,
+                                    bn_momentum=0.9,
+                                    pool_size=2,
+                                    pool_strides=2,
+                                    activation_fn=tf.nn.leaky_relu):
 
     layer_name = "deformable_conv2d_{0}".format(layer_number)
     pool_name = 'pool_{0}'.format(layer_number)
@@ -55,9 +55,12 @@ def build_deformable_conv2d_layer_2(input,
     with tf.variable_scope("deformable_conv2d_layer_{0}".format(layer_number)):
 
         batch, i_h, i_w, i_c = input.get_shape().as_list()
-        cnn_out = deform_conv2d(input, offset_shape=[i_h, i_w, i_c, 2 * kernel_size * kernel_size],
-                      filter_shape=[kernel_size, kernel_size, i_c, num_filter],
-                      activation = None, scope=layer_name)
+        cnn_out = deform_conv2d(
+            input,
+            offset_shape=[i_h, i_w, i_c, 2 * kernel_size * kernel_size],
+            filter_shape=[kernel_size, kernel_size, i_c, num_filter],
+            activation=None,
+            scope=layer_name)
 
         bn_out = tf.layers.batch_normalization(
             cnn_out, momentum=bn_momentum, training=training, name=bn_name)
@@ -72,6 +75,7 @@ def build_deformable_conv2d_layer_2(input,
         activation_out = activation_fn(pooling_out, name=activation_name)
 
     return activation_out
+
 
 """
 https://github.com/maestrojeong/deformable_convnet/blob/master/ops.py

@@ -70,7 +70,7 @@ def train():
     accuracy_op = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
     tf.summary.scalar('batch_accuracy', accuracy_op)
     confusion_matrix_op = tf.confusion_matrix(
-        y, tf.argmax(linear, 1), num_classes=NUM_CLASS)
+        y, tf.argmax(linear, 1), num_classes=NUM_CLASS, dtype=tf.int32)
 
     session_config = tf.ConfigProto()
     session_config.gpu_options.allow_growth = True
@@ -170,6 +170,7 @@ def test_phase(accuracy_op, best_test_accuracy, is_training, session, test_data,
     for image, label in test_data:
         image = np.expand_dims(image, axis=0)
         label = np.expand_dims(label, axis=0)
+        label = label.astype(np.int32)
         accuracy_value, confusion = session.run(
             [accuracy_op, confusion_matrix_op],
             feed_dict={

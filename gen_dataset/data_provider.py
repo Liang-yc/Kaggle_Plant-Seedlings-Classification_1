@@ -235,6 +235,7 @@ def tfrecord_file_to_nparray(tfrecord_file_name, image_size):
         image = Image.open(io.BytesIO(encoded))
         image = np.array(image.resize(image_size, Image.ANTIALIAS))[:, :, 0:3]
         image = image * (1.0 / 255) * 2.0 - 1.0  #[-1, +1] float32
+        image = image.astype(np.float32)
 
         label = example.features.feature['label'].int64_list.value[0]
 

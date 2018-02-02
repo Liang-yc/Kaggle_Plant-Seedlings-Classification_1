@@ -32,7 +32,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--batch_size", help="fine tune with mobilenet", default=96)
 parser.add_argument("--num_epoch", help="fine tune with mobilenet", default=999)
 parser.add_argument(
-    "--early_stopping_step", help="fine tune with mobilenet", default=10)
+    "--early_stopping_step", help="fine tune with mobilenet", default=50)
 args = parser.parse_args()
 
 
@@ -54,7 +54,7 @@ def train():
     image_to_summary = (image_batch + 1) / 2
     tf.summary.image('plant', image_to_summary, max_outputs=8)
 
-    linear, logits, trainable_var = build_model.build_cnn_8_crelu_classifier(
+    linear, logits, trainable_var = build_model.build_cnn_8_crelu_classifier_with_dropout(
         x, NUM_CLASS, is_training)
 
     loss_op = build_model.build_loss(y, linear)
@@ -131,6 +131,7 @@ def training_process(accuracy_op, global_step, image_batch, label_batch,
 
         if best_acc_updated:
             early_stop_step = 0
+            print('*** save best model...')
             best_model_saver.save(
                 session,
                 os.path.join(best_model_save_path,

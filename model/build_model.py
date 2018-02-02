@@ -188,6 +188,27 @@ def build_cnn_8_crelu_classifier(image_batch, num_class, training):
     return linear, logits, tf.trainable_variables(scope_name)
 
 
+def build_cnn_8_crelu_classifier_with_dropout(image_batch, num_class, training):
+    """
+
+    :param image_batch:
+    :param num_class:
+    :param training:
+    :return:
+    """
+
+    scope_name = "plant_seedings_cnn_8_classifier"
+
+    with tf.variable_scope(scope_name):
+        flatten = model.bn_cnn.build_bn_cnn_8_crelu_with_dropout(image_batch, training)
+
+        linear = tf.layers.dense(flatten, num_class, name='fc')
+
+        logits = tf.nn.softmax(linear, name='softmax')
+
+    return linear, logits, tf.trainable_variables(scope_name)
+
+
 def build_cnn_8_crelu_deformable_classifier(image_batch, num_class, training):
     """
 

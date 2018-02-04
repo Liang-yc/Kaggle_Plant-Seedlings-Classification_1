@@ -27,7 +27,7 @@ def find_k(cos, divisor):
     # stop gradient
     acos = tf.acos(cos)
     k = tf.floor(acos / divisor).detach()
-    return k
+    return tf.stop_gradient(k)
 
 
 def l_softmax_training(input, target, margin, weight):
@@ -68,7 +68,14 @@ def l_softmax_training(input, target, margin, weight):
                   * cos_terms * sin_sq_terms)
     cosm = tf.reduce_sum(cosm_terms, 1)
 
+    k = find_k(cos_target, divisor)
+    ls_target = norm_target_prod * ((tf.pow(-1, k)  * cosm) - 2 * k)
 
+    updated = tf.scatter_nd(logits_target_indices, ls_target, tf.shape(logits))
+    mask = tf.cast(tf.sparse_to_dense(logits_target_indices, ls_target, 1), tf.bool)
+    logits = tf.where(mask, updated, logits)
+
+    return logits
 
 def a_softmax():
     """

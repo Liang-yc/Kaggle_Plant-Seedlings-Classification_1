@@ -1,6 +1,10 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+
 import tensorflow as tf
 from model.deformable_conv2d import build_deformable_conv2d_layer, build_deformable_conv2d_layer_2
 

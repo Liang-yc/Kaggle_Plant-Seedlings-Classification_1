@@ -54,8 +54,8 @@ def train():
     image_to_summary = (image_batch + 1) / 2
     tf.summary.image('plant', image_to_summary, max_outputs=8)
 
-    linear, logits, trainable_var = build_model.build_cnn_8_crelu_classifier_with_dropout(
-        x, NUM_CLASS, is_training)
+    linear, logits, trainable_var = build_model.build_cnn_8_crelu_classifier_with_lsoftmax(
+        x, y, NUM_CLASS, is_training)
 
     loss_op = build_model.build_loss(y, linear)
     tf.summary.scalar("total_loss", loss_op)

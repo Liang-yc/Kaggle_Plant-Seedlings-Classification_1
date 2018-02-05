@@ -12,6 +12,7 @@ from tensorflow.python.framework import ops
 from tensorflow.python.ops import clip_ops
 
 import model.bn_cnn
+import model.l_softmax
 
 
 def add_gradients_summaries(grads_and_vars):
@@ -176,12 +177,26 @@ def build_cnn_8_crelu_classifier(image_batch, num_class, training):
     :return:
     """
 
-    scope_name = "plant_seedings_cnn_8_classifier"
+    scope_name = "plant_seedings_cnn_8_crelu_classifier"
 
     with tf.variable_scope(scope_name):
         flatten = model.bn_cnn.build_bn_cnn_8_crelu(image_batch, training)
 
         linear = tf.layers.dense(flatten, num_class, name='fc')
+
+        logits = tf.nn.softmax(linear, name='softmax')
+
+    return linear, logits, tf.trainable_variables(scope_name)
+
+
+def build_cnn_8_crelu_classifier_with_lsoftmax(image_batch, target, num_class, training):
+
+    scope_name = "plant_seedings_cnn_8_crelu_classifier_with_lsoftmax"
+
+    with tf.variable_scope(scope_name):
+        flatten = model.bn_cnn.build_bn_cnn_8_crelu(image_batch, training)
+
+        linear = model.l_softmax.l_softmax(flatten, target, num_class, 4, training, 'l_softmax')
 
         logits = tf.nn.softmax(linear, name='softmax')
 
@@ -197,7 +212,7 @@ def build_cnn_8_crelu_classifier_with_dropout(image_batch, num_class, training):
     :return:
     """
 
-    scope_name = "plant_seedings_cnn_8_classifier"
+    scope_name = "plant_seedings_cnn_8_crelu_classifier_with_dropout"
 
     with tf.variable_scope(scope_name):
         flatten = model.bn_cnn.build_bn_cnn_8_crelu_with_dropout(image_batch, training)

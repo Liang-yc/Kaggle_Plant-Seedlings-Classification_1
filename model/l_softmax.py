@@ -65,6 +65,7 @@ def l_softmax_training(input, target, margin, weight):
 
     norm_target_prod = weight_target_norm * input_norm
     # cos_target: (batch_size,)
+    # Multiple-Angle Formulas
     cos_target = tf.expand_dims(logits_target, axis=1) / (norm_target_prod + 1e-10)
     sin_sq_target = 1 - cos_target ** 2
 

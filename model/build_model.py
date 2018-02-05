@@ -189,14 +189,14 @@ def build_cnn_8_crelu_classifier(image_batch, num_class, training):
     return linear, logits, tf.trainable_variables(scope_name)
 
 
-def build_cnn_8_crelu_classifier_with_lsoftmax(image_batch, target, num_class, training):
+def build_cnn_8_crelu_classifier_with_lsoftmax(image_batch, target, num_class, lambda_decay, training):
 
     scope_name = "plant_seedings_cnn_8_crelu_classifier_with_lsoftmax"
 
     with tf.variable_scope(scope_name):
         flatten = model.bn_cnn.build_bn_cnn_8_crelu(image_batch, training)
 
-        linear = model.l_softmax.l_softmax(flatten, target, num_class, 4, training, 'l_softmax')
+        linear = model.l_softmax.l_softmax(flatten, target, num_class, 4, lambda_decay, training, 'l_softmax')
 
         logits = tf.nn.softmax(linear, name='softmax')
 

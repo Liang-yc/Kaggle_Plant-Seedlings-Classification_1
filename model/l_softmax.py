@@ -9,7 +9,7 @@ import tensorflow as tf
 import numpy as np
 from scipy.special import binom
 
-def l_softmax(input, target, num_class, margin, training, name):
+def l_softmax(input, target, num_class, margin, lambda_decay, training, name):
     """
     https://arxiv.org/abs/1612.02295
     https://github.com/jihunchoi/lsoftmax-pytorch/blob/master/lsoftmax.py
@@ -21,7 +21,7 @@ def l_softmax(input, target, num_class, margin, training, name):
                                  initializer=tf.contrib.layers.xavier_initializer())
 
         logits = tf.cond(training,
-                         lambda: l_softmax_training(input, target, margin, weight),
+                         lambda: l_softmax_training(input, target, margin, lambda_decay, weight),
                          lambda: tf.matmul(input, weight))
         # logits = l_softmax_training(input, target, margin, weight)
         return logits
@@ -34,7 +34,7 @@ def find_k(cos, divisor):
     return tf.stop_gradient(k)
 
 
-def l_softmax_training(input, target, margin, weight):
+def l_softmax_training(input, target, margin, lambda_decay, weight):
 
     divisor = tf.constant(np.pi / margin)
     coeffs = tf.constant(binom(margin, range(0, margin + 1, 2)), tf.float32)
@@ -77,6 +77,8 @@ def l_softmax_training(input, target, margin, weight):
 
     k = find_k(cos_target, divisor)
     ls_target = norm_target_prod * ((tf.pow(-1., k)  * cosm) - 2. * k)
+    # f_yi = (lambda*|W_yi|*|x_i|*cos(theta_yi) + |W_yi|*|x_i|*psi(theta_yi)) / (1+lambda)
+    ls_target = (lambda_decay * tf.expand_dims(logits_target, axis=1) + ls_target) / (1. + lambda_decay)
 
     """
     updated = [[0, x, 0, 0],

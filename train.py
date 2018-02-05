@@ -29,10 +29,18 @@ TRAIN_CONFIG = {
 NUM_CLASS = 12
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--batch_size", help="fine tune with mobilenet", default=96)
-parser.add_argument("--num_epoch", help="fine tune with mobilenet", default=999)
+parser.add_argument("--batch_size", help="", default=64)
+parser.add_argument("--num_epoch", help="", default=999)
 parser.add_argument(
-    "--early_stopping_step", help="fine tune with mobilenet", default=50)
+    "--early_stopping_step", help="", default=50)
+parser.add_argument(
+    "--lambda_decay_init", help="", default=1000.0)
+parser.add_argument(
+    "--lambda_decay_steps", help="", default=1000)
+parser.add_argument(
+    "--lambda_decay_rate", help="", default=0.6)
+parser.add_argument(
+    "--lambda_decay_min", help="", default=5.0)
 args = parser.parse_args()
 
 
@@ -54,13 +62,25 @@ def train():
     image_to_summary = (image_batch + 1) / 2
     tf.summary.image('plant', image_to_summary, max_outputs=8)
 
+    global_step = tf.train.create_global_step()
+
+    lambda_decay = tf.train.exponential_decay(args.lambda_decay_init, global_step,
+                                               args.lambda_decay_steps,
+                                               args.lambda_decay_rate,
+                                               staircase=True, name='lambda_decay')
+
+    lambda_decay = tf.cond(lambda_decay > args.lambda_decay_min,
+                           lambda: lambda_decay,
+                           lambda: tf.constant(args.lambda_decay_min))
+
+    tf.summary.scalar("lambda_decay", lambda_decay)
+
     linear, logits, trainable_var = build_model.build_cnn_8_crelu_classifier_with_lsoftmax(
-        x, y, NUM_CLASS, is_training)
+        x, y, NUM_CLASS, lambda_decay, is_training)
 
     loss_op = build_model.build_loss(y, linear)
     tf.summary.scalar("total_loss", loss_op)
 
-    global_step = tf.train.create_global_step()
     train_op = build_model.build_train_op(loss_op, trainable_var, global_step)
 
     for var in tf.global_variables():

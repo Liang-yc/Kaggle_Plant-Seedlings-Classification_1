@@ -12,6 +12,7 @@ import sys
 import argparse
 import numpy as np
 import tensorflow as tf
+from tensorflow.python import debug as tf_debug
 
 import model.build_model as build_model
 import gen_dataset.data_provider as data_provider
@@ -29,18 +30,20 @@ TRAIN_CONFIG = {
 NUM_CLASS = 12
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--batch_size", help="", default=64)
-parser.add_argument("--num_epoch", help="", default=999)
+parser.add_argument("--batch_size", help="", default=64, type=int)
+parser.add_argument("--num_epoch", help="", default=999, type=int)
 parser.add_argument(
-    "--early_stopping_step", help="", default=50)
+    "--early_stopping_step", help="", default=50, type=int)
 parser.add_argument(
-    "--lambda_decay_init", help="", default=1000.0)
+    "--lambda_decay_init", help="", default=1000.0, type=float)
 parser.add_argument(
-    "--lambda_decay_steps", help="", default=1000)
+    "--lambda_decay_steps", help="", default=1000, type=int)
 parser.add_argument(
-    "--lambda_decay_rate", help="", default=0.6)
+    "--lambda_decay_rate", help="", default=0.6, type=float)
 parser.add_argument(
-    "--lambda_decay_min", help="", default=5.0)
+    "--lambda_decay_min", help="", default=5.0, type=float)
+parser.add_argument(
+    "--tfdbg", help="", default=False, type=bool)
 args = parser.parse_args()
 
 
@@ -96,6 +99,8 @@ def train():
     session_config.gpu_options.allow_growth = True
 
     with tf.Session(config=session_config) as session:
+        if args.tfdbg:
+            session = tf_debug.LocalCLIDebugWrapperSession(session)
         coord = tf.train.Coordinator()
         threads = tf.train.start_queue_runners(coord=coord)
 

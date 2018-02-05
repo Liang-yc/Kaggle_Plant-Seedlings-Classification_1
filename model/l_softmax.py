@@ -51,7 +51,7 @@ def l_softmax_training(input, target, margin, lambda_decay, weight):
     # weight = tf.nn.l2_normalize(weight, dim=1, name='weight_l2_normalize')
     input_norm = tf.norm(input, ord=2, axis=1, keep_dims=True,
                          name='input_l2_norm')
-    weight_norm = tf.norm(weight, ord=2, axis=1, keep_dims=True,
+    weight_norm = tf.norm(weight, ord=2, axis=0, keep_dims=True,
                           name='weight_l2_norm')
 
     logits = tf.matmul(input, weight)
@@ -61,9 +61,9 @@ def l_softmax_training(input, target, margin, lambda_decay, weight):
     logits_target_indices = tf.cast(tf.transpose(tf.stack([batch_index, target])), tf.int32)
 
     logits_target = tf.gather_nd(logits, logits_target_indices)
-    weight_target_norm = tf.gather(weight_norm, target, axis=0)
+    weight_target_norm = tf.gather(weight_norm, target, axis=1)
 
-    norm_target_prod = weight_target_norm * input_norm
+    norm_target_prod = tf.transpose(weight_target_norm) * input_norm
     # cos_target: (batch_size,)
     # Multiple-Angle Formulas
     cos_target = tf.expand_dims(logits_target, axis=1) / (norm_target_prod + 1e-10)

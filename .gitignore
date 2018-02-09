@@ -116,3 +116,5 @@ gen_dataset/plant.config.test.tfrecord
 gen_dataset/plant.config.train.tfrecord
 model_weight
 /model_best_weight
+/performance_log
+

@@ -41,7 +41,7 @@ parser.add_argument(
 parser.add_argument(
     "--lambda_decay_rate", help="", default=0.6, type=float)
 parser.add_argument(
-    "--lambda_decay_min", help="", default=5.0, type=float)
+    "--lambda_decay_min", help="", default=0.01, type=float)
 parser.add_argument(
     "--tfdbg", help="", default=False, type=bool)
 args = parser.parse_args()

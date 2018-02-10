@@ -46,6 +46,13 @@ parser.add_argument(
     "--tfdbg", help="", default=False, type=bool)
 args = parser.parse_args()
 
+def test_augmented_acc(linear, y):
+    linear = build_model.build_test_time_vote(linear)
+    test_correct_prediction = tf.equal(tf.squeeze(y), tf.argmax(linear, 1))
+    test_accuracy_op = tf.reduce_mean(tf.cast(test_correct_prediction, tf.float32))
+    confusion_matrix_op = tf.confusion_matrix(
+        y, tf.argmax(linear, 1), num_classes=NUM_CLASS, dtype=tf.int32)
+    return test_accuracy_op, confusion_matrix_op
 
 def train():
     train_queue, test_queue = data_provider.config_to_prefetch_queue(
@@ -92,8 +99,11 @@ def train():
     correct_prediction = tf.equal(tf.squeeze(y), tf.argmax(linear, 1))
     accuracy_op = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
     tf.summary.scalar('batch_accuracy', accuracy_op)
+    test_augmented_accuracy_op, test_augmented_confusion_matrix_op = test_augmented_acc(linear, y)
     confusion_matrix_op = tf.confusion_matrix(
         y, tf.argmax(linear, 1), num_classes=NUM_CLASS, dtype=tf.int32)
+    x_test = tf.placeholder(tf.float32, shape=(None, 256, 256, 3), name='x_test')
+    x_augmented = build_model.build_test_time_data_augmentation(x_test)
 
     session_config = tf.ConfigProto()
     session_config.gpu_options.allow_growth = True
@@ -109,7 +119,9 @@ def train():
         # epoch
         training_process(accuracy_op, global_step, image_batch, label_batch,
                          is_training, loss_op, session, train_op, x, y,
-                         args.num_epoch, confusion_matrix_op)
+                         args.num_epoch, confusion_matrix_op,
+                         test_augmented_accuracy_op,
+                         test_augmented_confusion_matrix_op, x_test, x_augmented)
 
         print("thread.join")
         coord.request_stop()
@@ -118,7 +130,8 @@ def train():
 
 def training_process(accuracy_op, global_step, image_batch, label_batch,
                      is_training, loss_op, session, train_op, x, y, num_epoch,
-                     confusion_matrix_op):
+                     confusion_matrix_op, test_augmented_accuracy_op,
+                     test_augmented_confusion_matrix_op, x_test, x_augmented):
 
     best_test_accuracy = 0
 
@@ -152,11 +165,12 @@ def training_process(accuracy_op, global_step, image_batch, label_batch,
 
         best_acc_updated, best_test_accuracy = test_phase(
             accuracy_op, best_test_accuracy, is_training, session, test_data, x,
-            y, confusion_matrix_op)
+            y, confusion_matrix_op, test_augmented_accuracy_op,
+            test_augmented_confusion_matrix_op, x_test, x_augmented)
 
         if best_acc_updated:
             early_stop_step = 0
-            print('*** save best model...')
+            print('========================= save best model =======================')
             best_model_saver.save(
                 session,
                 os.path.join(best_model_save_path,
@@ -172,7 +186,8 @@ def training_process(accuracy_op, global_step, image_batch, label_batch,
 
 
 def test_phase(accuracy_op, best_test_accuracy, is_training, session, test_data,
-               x, y, confusion_matrix_op):
+               x, y, confusion_matrix_op, test_augmented_accuracy_op,
+               test_augmented_confusion_matrix_op, x_test, x_augmented):
 
     # for k in range(
     #        int(math.ceil(TRAIN_CONFIG['test_size'] / BATCH_SIZE))):
@@ -191,8 +206,10 @@ def test_phase(accuracy_op, best_test_accuracy, is_training, session, test_data,
     # print("prefetch_queue acc", test_accuracy_avg)
 
     confusion_matrix = np.zeros((NUM_CLASS, NUM_CLASS))
+    augmented_confusion_matrix = np.zeros((NUM_CLASS, NUM_CLASS))
     k = 0
     test_accuracy_avg = 0
+    test_augmented_accuracy_avg = 0
     for image, label in test_data:
         image = np.expand_dims(image, axis=0)
         label = np.expand_dims(label, axis=0)
@@ -207,15 +224,34 @@ def test_phase(accuracy_op, best_test_accuracy, is_training, session, test_data,
         test_accuracy_avg = test_accuracy_avg + (
             accuracy_value - test_accuracy_avg) / (
                 k + 1)
+
+        image_augmented = session.run([x_augmented], feed_dict={x_test: image})[0]
+        augmented_accuracy_value, augmented_confusion = session.run(
+            [test_augmented_accuracy_op, test_augmented_confusion_matrix_op],
+            feed_dict={
+                x: image_augmented,
+                y: label,
+                is_training: False
+            })
+
+        test_augmented_accuracy_avg = test_augmented_accuracy_avg + (
+            augmented_accuracy_value - test_augmented_accuracy_avg) / (
+                k + 1)
+
         k += 1
         confusion_matrix = confusion_matrix + confusion
-        sys.stdout.write("\rtest acc:{0}           ".format(test_accuracy_avg))
+        augmented_confusion_matrix = augmented_confusion_matrix + augmented_confusion
+        sys.stdout.write("\raugmented_test acc:{0} - test acc:{1}           ".format(test_augmented_accuracy_avg, test_accuracy_avg))
         sys.stdout.flush()
     print("")
     print(confusion_matrix)
+    print(augmented_confusion_matrix)
+
     if best_test_accuracy < test_accuracy_avg:
+        print("{0} < {1}".format(best_test_accuracy, test_accuracy_avg))
         best_test_accuracy = test_accuracy_avg
         return True, best_test_accuracy
+    print("{0} > {1}".format(best_test_accuracy, test_accuracy_avg))
     return False, best_test_accuracy
 
 
@@ -226,7 +262,7 @@ def training_phase(accuracy_op, global_step, epoch, image_batch, label_batch,
     for j in range(
             int(
                 math.ceil(
-                    TRAIN_CONFIG['training_size'] * 16 / args.batch_size))):
+                    TRAIN_CONFIG['training_size'] * 8 / args.batch_size))):
         images, labels = session.run([image_batch, label_batch])
         if j == 0:
             # step, summary, loss_value, accuracy_value, confusion, _ = session.run(

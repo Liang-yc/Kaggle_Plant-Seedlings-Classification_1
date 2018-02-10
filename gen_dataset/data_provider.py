@@ -190,7 +190,6 @@ def config_to_prefetch_queue(config=None,
 
     if random_flip_rot_train:
         image_train = tf.image.random_flip_up_down(image_train)
-        image_train = tf.image.random_flip_left_right(image_train)
 
         k = tf.random_uniform([1], 1, 5, tf.int32)
         image_train = tf.image.rot90(image_train, k[0])

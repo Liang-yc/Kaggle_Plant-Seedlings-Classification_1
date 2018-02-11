@@ -10,6 +10,7 @@ import logging
 import tensorflow as tf
 from tensorflow.python.framework import ops
 from tensorflow.python.ops import clip_ops
+import horovod.tensorflow as hvd
 
 import model.bn_cnn
 import model.l_softmax
@@ -285,7 +286,8 @@ def build_train_op(loss, trainable, global_step):
     :param trainable:
     :return: optimizer wrt trainable
     """
-    optimizer = tf.train.AdamOptimizer()
+    optimizer = tf.train.AdamOptimizer(learning_rate=0.001 * hvd.size())
+    optimizer = hvd.DistributedOptimizer(optimizer)
 
     update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
 

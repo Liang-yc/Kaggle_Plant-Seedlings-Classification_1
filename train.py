@@ -13,9 +13,12 @@ import argparse
 import numpy as np
 import tensorflow as tf
 from tensorflow.python import debug as tf_debug
+import horovod.tensorflow as hvd
 
 import model.build_model as build_model
 import gen_dataset.data_provider as data_provider
+
+hvd.init()
 
 TRAIN_CONFIG = {
     'name': 'plant_seedings_classification',
@@ -30,7 +33,7 @@ TRAIN_CONFIG = {
 NUM_CLASS = 12
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--batch_size", help="", default=64, type=int)
+parser.add_argument("--batch_size", help="", default=128, type=int)
 parser.add_argument("--num_epoch", help="", default=999, type=int)
 parser.add_argument(
     "--early_stopping_step", help="", default=50, type=int)
@@ -46,6 +49,9 @@ parser.add_argument(
     "--tfdbg", help="", default=False, type=bool)
 args = parser.parse_args()
 
+BATCH_SIZE_PER_REPLICA = int(args.batch_size / hvd.size())
+DATA_AUGMENTATION_TIMES_PER_REPLICA = int(8 / hvd.size())
+
 def test_augmented_acc(linear, y):
     linear = build_model.build_test_time_vote(linear)
     test_correct_prediction = tf.equal(tf.squeeze(y), tf.argmax(linear, 1))
@@ -58,7 +64,7 @@ def train():
     train_queue, test_queue = data_provider.config_to_prefetch_queue(
         TRAIN_CONFIG,
         './gen_dataset',
-        batch_size=args.batch_size,
+        batch_size=BATCH_SIZE_PER_REPLICA,
         random_flip_rot_train=True)
 
     image_batch, label_batch = train_queue.dequeue()
@@ -107,6 +113,7 @@ def train():
 
     session_config = tf.ConfigProto()
     session_config.gpu_options.allow_growth = True
+    session_config.gpu_options.visible_device_list = str(hvd.local_rank())
 
     with tf.Session(config=session_config) as session:
         if args.tfdbg:
@@ -115,6 +122,7 @@ def train():
         threads = tf.train.start_queue_runners(coord=coord)
 
         session.run(tf.global_variables_initializer())
+        session.run(hvd.broadcast_global_variables(0))
 
         # epoch
         training_process(accuracy_op, global_step, image_batch, label_batch,
@@ -138,7 +146,7 @@ def training_process(accuracy_op, global_step, image_batch, label_batch,
     merge_summary = tf.summary.merge_all()
 
     model_saver = tf.train.Saver(max_to_keep=15)
-    save_path = 'model_weight'
+    save_path = 'model_weight_{0}'.format(hvd.rank())
     if not os.path.exists(save_path):
         os.makedirs(save_path)
     summary_writer = tf.summary.FileWriter(save_path, session.graph)
@@ -163,26 +171,27 @@ def training_process(accuracy_op, global_step, image_batch, label_batch,
             os.path.join(save_path, "plant_seedings_classifier.ckpt"),
             global_step=global_step)
 
-        best_acc_updated, best_test_accuracy = test_phase(
-            accuracy_op, best_test_accuracy, is_training, session, test_data, x,
-            y, confusion_matrix_op, test_augmented_accuracy_op,
-            test_augmented_confusion_matrix_op, x_test, x_augmented)
-
-        if best_acc_updated:
-            early_stop_step = 0
-            print('========================= save best model =======================')
-            best_model_saver.save(
-                session,
-                os.path.join(best_model_save_path,
-                             "plant_seedings_classifier_{0:.4f}.ckpt".format(
-                                 best_test_accuracy)),
-                global_step=global_step)
-        else:
-            early_stop_step += 1
-
-        if early_stop_step >= args.early_stopping_step:
-            print("early stop...")
-            return
+        if hvd.rank() == 0:
+            best_acc_updated, best_test_accuracy = test_phase(
+                accuracy_op, best_test_accuracy, is_training, session, test_data, x,
+                y, confusion_matrix_op, test_augmented_accuracy_op,
+                test_augmented_confusion_matrix_op, x_test, x_augmented)
+        
+            if best_acc_updated:
+                early_stop_step = 0
+                print('========================= save best model =======================')
+                best_model_saver.save(
+                    session,
+                    os.path.join(best_model_save_path,
+                                "plant_seedings_classifier_{0:.4f}.ckpt".format(
+                                    best_test_accuracy)),
+                    global_step=global_step)
+            else:
+                early_stop_step += 1
+        
+            if early_stop_step >= args.early_stopping_step:
+                print("early stop...")
+                return
 
 
 def test_phase(accuracy_op, best_test_accuracy, is_training, session, test_data,
@@ -244,7 +253,9 @@ def test_phase(accuracy_op, best_test_accuracy, is_training, session, test_data,
         sys.stdout.write("\raugmented_test acc:{0} - test acc:{1}           ".format(test_augmented_accuracy_avg, test_accuracy_avg))
         sys.stdout.flush()
     print("")
+    print("confusion_matrix")
     print(confusion_matrix)
+    print("augmented_confusion_matrix")
     print(augmented_confusion_matrix)
 
     if best_test_accuracy < test_accuracy_avg:
@@ -262,7 +273,7 @@ def training_phase(accuracy_op, global_step, epoch, image_batch, label_batch,
     for j in range(
             int(
                 math.ceil(
-                    TRAIN_CONFIG['training_size'] * 8 / args.batch_size))):
+                    TRAIN_CONFIG['training_size'] * DATA_AUGMENTATION_TIMES_PER_REPLICA / BATCH_SIZE_PER_REPLICA))):
         images, labels = session.run([image_batch, label_batch])
         if j == 0:
             # step, summary, loss_value, accuracy_value, confusion, _ = session.run(

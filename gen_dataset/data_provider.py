@@ -31,7 +31,7 @@ ShuffleBatchConfig = collections.namedtuple(
     'ShuffleBatchConfig',
     ['num_batching_threads', 'queue_capacity', 'min_after_dequeue'])
 DEFAULT_SHUFFLE_CONFIG = ShuffleBatchConfig(
-    num_batching_threads=8, queue_capacity=3000, min_after_dequeue=1000)
+    num_batching_threads=8, queue_capacity=4000, min_after_dequeue=1000)
 
 
 def config_to_slim_dataset(config=None, dataset_dir=None):

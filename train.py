@@ -55,6 +55,7 @@ def test_augmented_acc(linear, y):
     return test_accuracy_op, confusion_matrix_op
 
 def train():
+    print("build model...")
     train_queue, test_queue = data_provider.config_to_prefetch_queue(
         TRAIN_CONFIG,
         './gen_dataset',
@@ -88,14 +89,17 @@ def train():
     linear, logits, trainable_var = build_model.build_cnn_8_crelu_classifier_with_lsoftmax(
         x, y, NUM_CLASS, lambda_decay, is_training)
 
+    print("build loss...")
     loss_op = build_model.build_loss(y, linear)
     tf.summary.scalar("total_loss", loss_op)
 
+    print("build train op...")
     train_op = build_model.build_train_op(loss_op, trainable_var, global_step)
 
     for var in tf.global_variables():
         tf.summary.histogram(var.op.name, var)
 
+    print("build accuracy op...")
     correct_prediction = tf.equal(tf.squeeze(y), tf.argmax(linear, 1))
     accuracy_op = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
     tf.summary.scalar('batch_accuracy', accuracy_op)
@@ -109,6 +113,7 @@ def train():
     session_config.gpu_options.allow_growth = True
 
     with tf.Session(config=session_config) as session:
+        print("session run...")
         if args.tfdbg:
             session = tf_debug.LocalCLIDebugWrapperSession(session)
         coord = tf.train.Coordinator()
@@ -244,14 +249,16 @@ def test_phase(accuracy_op, best_test_accuracy, is_training, session, test_data,
         sys.stdout.write("\raugmented_test acc:{0} - test acc:{1}           ".format(test_augmented_accuracy_avg, test_accuracy_avg))
         sys.stdout.flush()
     print("")
+    print("confusion matrix")
     print(confusion_matrix)
+    print("augmented confusion matrix")
     print(augmented_confusion_matrix)
 
-    if best_test_accuracy < test_accuracy_avg:
-        print("{0} < {1}".format(best_test_accuracy, test_accuracy_avg))
-        best_test_accuracy = test_accuracy_avg
+    if best_test_accuracy < test_augmented_accuracy_avg:
+        print("{0} < {1}".format(best_test_accuracy, test_augmented_accuracy_avg))
+        best_test_accuracy = test_augmented_accuracy_avg
         return True, best_test_accuracy
-    print("{0} > {1}".format(best_test_accuracy, test_accuracy_avg))
+    print("{0} > {1}".format(best_test_accuracy, test_augmented_accuracy_avg))
     return False, best_test_accuracy
 
 

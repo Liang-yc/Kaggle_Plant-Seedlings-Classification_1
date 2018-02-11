@@ -33,7 +33,7 @@ TRAIN_CONFIG = {
 NUM_CLASS = 12
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--batch_size", help="", default=128, type=int)
+parser.add_argument("--batch_size", help="", default=80, type=int)
 parser.add_argument("--num_epoch", help="", default=999, type=int)
 parser.add_argument(
     "--early_stopping_step", help="", default=50, type=int)
@@ -91,7 +91,7 @@ def train():
 
     tf.summary.scalar("lambda_decay", lambda_decay)
 
-    linear, logits, trainable_var = build_model.build_cnn_8_crelu_classifier_with_lsoftmax(
+    linear, logits, trainable_var = build_model.build_cnn_12_classifier_with_lsoftmax(
         x, y, NUM_CLASS, lambda_decay, is_training)
 
     loss_op = build_model.build_loss(y, linear)
@@ -162,13 +162,13 @@ def training_process(accuracy_op, global_step, image_batch, label_batch,
 
     early_stop_step = 0
     for i in range(num_epoch):
-        training_phase(accuracy_op, global_step, i, image_batch, label_batch,
+        loss_avg = training_phase(accuracy_op, global_step, i, image_batch, label_batch,
                        is_training, loss_op, merge_summary, session,
                        summary_writer, train_op, x, y)
 
         model_saver.save(
             session,
-            os.path.join(save_path, "plant_seedings_classifier.ckpt"),
+            os.path.join(save_path, "plant_seedings_classifier_{0:.8f}.ckpt".format(loss_avg)),
             global_step=global_step)
 
         if hvd.rank() == 0:
@@ -183,8 +183,8 @@ def training_process(accuracy_op, global_step, image_batch, label_batch,
                 best_model_saver.save(
                     session,
                     os.path.join(best_model_save_path,
-                                "plant_seedings_classifier_{0:.4f}.ckpt".format(
-                                    best_test_accuracy)),
+                                "plant_seedings_classifier_{0:.4f}_{1:.8f}.ckpt".format(
+                                    best_test_accuracy, loss_avg)),
                     global_step=global_step)
             else:
                 early_stop_step += 1
@@ -270,6 +270,7 @@ def training_phase(accuracy_op, global_step, epoch, image_batch, label_batch,
                    is_training, loss_op, merge_summary, session, summary_writer,
                    train_op, x, y):
     accuracy_avg = 0.0
+    loss_avg = 0.0
     for j in range(
             int(
                 math.ceil(
@@ -300,12 +301,13 @@ def training_phase(accuracy_op, global_step, epoch, image_batch, label_batch,
 
         # confusion_matrix = confusion_matrix + confusion
         accuracy_avg = accuracy_avg + (accuracy_value - accuracy_avg) / (j + 1)
-        sys.stdout.write("\r{0}--{1} training loss:{2}    ".format(
-            epoch, j, loss_value))
+        loss_avg = loss_avg + (loss_value - loss_avg) / (j + 1)
+        sys.stdout.write("\r{0}--{1} training avg loss:{2} batch loss:{3}    ".format(
+            epoch, j, loss_avg, loss_value))
         sys.stdout.flush()
     print("")
     print("training acc:{0}".format(accuracy_avg))
-    # print(confusion_matrix)
+    return loss_avg
 
 
 train()

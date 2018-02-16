@@ -33,18 +33,18 @@ TRAIN_CONFIG = {
 NUM_CLASS = 12
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--batch_size", help="", default=80, type=int)
+parser.add_argument("--batch_size", help="", default=64, type=int)
 parser.add_argument("--num_epoch", help="", default=999, type=int)
 parser.add_argument(
-    "--early_stopping_step", help="", default=50, type=int)
+    "--early_stopping_step", help="", default=100, type=int)
 parser.add_argument(
     "--lambda_decay_init", help="", default=1000.0, type=float)
 parser.add_argument(
-    "--lambda_decay_steps", help="", default=1000, type=int)
+    "--lambda_decay_steps", help="", default=2000, type=int)
 parser.add_argument(
-    "--lambda_decay_rate", help="", default=0.6, type=float)
+    "--lambda_decay_rate", help="", default=0.8, type=float)
 parser.add_argument(
-    "--lambda_decay_min", help="", default=0.01, type=float)
+    "--lambda_decay_min", help="", default=9.0, type=float)
 parser.add_argument(
     "--tfdbg", help="", default=False, type=bool)
 args = parser.parse_args()
@@ -91,7 +91,7 @@ def train():
 
     tf.summary.scalar("lambda_decay", lambda_decay)
 
-    linear, logits, trainable_var = build_model.build_cnn_12_classifier_with_lsoftmax(
+    linear, logits, trainable_var = build_model.build_cnn_8_crelu_classifier_with_lsoftmax(
         x, y, NUM_CLASS, lambda_decay, is_training)
 
     loss_op = build_model.build_loss(y, linear)

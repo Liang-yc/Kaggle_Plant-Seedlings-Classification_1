@@ -118,4 +118,5 @@ model_weight
 /model_best_weight
 /performance_log
 model_weight_*
+pretrained_model/*
 

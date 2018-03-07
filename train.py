@@ -30,10 +30,21 @@ TRAIN_CONFIG = {
     'items_to_descriptions': {''}
 }
 
+RESNET_50_TRAIN_CONFIG = {
+    'name': 'plant_seedings_classification',
+    'training_size': 3800,
+    'test_size': 950,
+    'pattern_training_set': 'plant.config.train*.tfrecord',
+    'pattern_test_set': 'plant.config.test*.tfrecord',
+    'image_shape': (224, 224, 3),
+    'items_to_descriptions': {''}
+}
+
 NUM_CLASS = 12
+CONFIG_USE = RESNET_50_TRAIN_CONFIG
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--batch_size", help="", default=64, type=int)
+parser.add_argument("--batch_size", help="", default=196, type=int)
 parser.add_argument("--num_epoch", help="", default=999, type=int)
 parser.add_argument(
     "--early_stopping_step", help="", default=100, type=int)
@@ -62,15 +73,17 @@ def test_augmented_acc(linear, y):
 
 def train():
     train_queue, test_queue = data_provider.config_to_prefetch_queue(
-        TRAIN_CONFIG,
+        CONFIG_USE,
         './gen_dataset',
         batch_size=BATCH_SIZE_PER_REPLICA,
-        random_flip_rot_train=True)
+        random_flip_rot_train=True,
+        preprocessing='inception')
 
     image_batch, label_batch = train_queue.dequeue()
     test_image_batch, test_label_batch = test_queue.dequeue()
 
-    x = tf.placeholder(tf.float32, shape=(None, 256, 256, 3), name='x')
+    x = tf.placeholder(tf.float32, shape=(None, CONFIG_USE['image_shape'][0],
+        CONFIG_USE['image_shape'][1], CONFIG_USE['image_shape'][2]), name='x')
     y = tf.placeholder(tf.int64, shape=(None), name='y')
     is_training = tf.placeholder(tf.bool, name='phase')
 
@@ -91,7 +104,7 @@ def train():
 
     tf.summary.scalar("lambda_decay", lambda_decay)
 
-    linear, logits, trainable_var = build_model.build_cnn_8_crelu_classifier_with_lsoftmax(
+    linear, logits, trainable_var = build_model.build_resnet_v2_50(
         x, y, NUM_CLASS, lambda_decay, is_training)
 
     loss_op = build_model.build_loss(y, linear)
@@ -108,7 +121,8 @@ def train():
     test_augmented_accuracy_op, test_augmented_confusion_matrix_op = test_augmented_acc(linear, y)
     confusion_matrix_op = tf.confusion_matrix(
         y, tf.argmax(linear, 1), num_classes=NUM_CLASS, dtype=tf.int32)
-    x_test = tf.placeholder(tf.float32, shape=(None, 256, 256, 3), name='x_test')
+    x_test = tf.placeholder(tf.float32, shape=(None, CONFIG_USE['image_shape'][0],
+        CONFIG_USE['image_shape'][1], CONFIG_USE['image_shape'][2]), name='x_test')
     x_augmented = build_model.build_test_time_data_augmentation(x_test)
 
     session_config = tf.ConfigProto()
@@ -158,7 +172,10 @@ def training_process(accuracy_op, global_step, image_batch, label_batch,
 
     test_data = data_provider.tfrecord_file_to_nparray(
         './gen_dataset/plant.config.test.tfrecord',
-        TRAIN_CONFIG['image_shape'][0:2])
+        CONFIG_USE['image_shape'][0:2],
+        preprocessing='inception')
+
+    build_model.restore_pretrained_resnet_v2_50(session)
 
     early_stop_step = 0
     for i in range(num_epoch):
@@ -176,7 +193,7 @@ def training_process(accuracy_op, global_step, image_batch, label_batch,
                 accuracy_op, best_test_accuracy, is_training, session, test_data, x,
                 y, confusion_matrix_op, test_augmented_accuracy_op,
                 test_augmented_confusion_matrix_op, x_test, x_augmented)
-        
+
             if best_acc_updated:
                 early_stop_step = 0
                 print('========================= save best model =======================')
@@ -188,7 +205,7 @@ def training_process(accuracy_op, global_step, image_batch, label_batch,
                     global_step=global_step)
             else:
                 early_stop_step += 1
-        
+
             if early_stop_step >= args.early_stopping_step:
                 print("early stop...")
                 return
@@ -274,7 +291,7 @@ def training_phase(accuracy_op, global_step, epoch, image_batch, label_batch,
     for j in range(
             int(
                 math.ceil(
-                    TRAIN_CONFIG['training_size'] * DATA_AUGMENTATION_TIMES_PER_REPLICA / BATCH_SIZE_PER_REPLICA))):
+                    CONFIG_USE['training_size'] * DATA_AUGMENTATION_TIMES_PER_REPLICA / BATCH_SIZE_PER_REPLICA))):
         images, labels = session.run([image_batch, label_batch])
         if j == 0:
             # step, summary, loss_value, accuracy_value, confusion, _ = session.run(

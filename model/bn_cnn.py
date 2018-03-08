@@ -341,6 +341,57 @@ def build_bn_cnn_8_crelu(image_batch, training):
     return flatten
 
 
+def build_bn_cnn_8_crelu_2(image_batch, training):
+    """
+
+        :param image_batch:
+        :return:
+        """
+    scope_name = 'bn_cnn_8_crelu'
+
+    with tf.variable_scope(scope_name):
+        # 128 x 128 x 128 (crelu)
+        to_next_layer = build_cnn_bn_pool_layer(
+            image_batch, training, 1, num_filter=64,
+            activation_fn=tf.nn.crelu)[0]
+
+        # 64 x 64 x 128 (crelu)
+        to_next_layer = build_cnn_bn_pool_layer(
+            to_next_layer,
+            training,
+            2,
+            num_filter=64,
+            activation_fn=tf.nn.crelu)[0]
+
+        # 32 x 32 x 256
+        to_next_layer = build_cnn_bn_pool_layer(
+            to_next_layer, training, 3, num_filter=256)[0]
+
+        # 16 x 16 x 256
+        to_next_layer = build_cnn_bn_pool_layer(
+            to_next_layer, training, 4, num_filter=256)[0]
+
+        # 8 x 8 x 512
+        to_next_layer = build_cnn_bn_pool_layer(
+            to_next_layer, training, 5, num_filter=512)[0]
+
+        # 4 x 4 x 512
+        to_next_layer = build_cnn_bn_pool_layer(
+            to_next_layer, training, 6, num_filter=512)[0]
+
+        # 2 x 2 x 1024
+        to_next_layer = build_cnn_bn_pool_layer(
+            to_next_layer, training, 7, num_filter=1024)[0]
+
+        # 1 x 1 x 2048
+        to_next_layer = build_cnn_bn_pool_layer(
+            to_next_layer, training, 8, num_filter=2048)[0]
+
+        flatten = tf.layers.flatten(to_next_layer, name='flatten')
+
+    return flatten
+
+
 def build_bn_cnn_6_with_skip_connection(image_batch, training):
     """
 
@@ -416,7 +467,7 @@ def build_cnn_bn_layer(image_batch,
 
     bn_out = tf.layers.batch_normalization(
         cnn_out, momentum=bn_momentum, training=training, name=bn_name)
-    
+
     activation_out = activation_fn(bn_out, name=activation_name)
     return activation_out, bn_out, cnn_out
 

@@ -15,7 +15,8 @@ import tensorflow as tf
 from tensorflow.python import debug as tf_debug
 import horovod.tensorflow as hvd
 
-import model.build_model as build_model
+from model.model_class import InceptionResnetV2
+from model.build_model import build_test_time_vote, build_test_time_data_augmentation
 import gen_dataset.data_provider as data_provider
 
 hvd.init()
@@ -40,11 +41,21 @@ RESNET_50_TRAIN_CONFIG = {
     'items_to_descriptions': {''}
 }
 
+INCEPTION_RESNET_TRAIN_CONFIG = {
+    'name': 'plant_seedings_classification',
+    'training_size': 3800,
+    'test_size': 950,
+    'pattern_training_set': 'plant.config.train*.tfrecord',
+    'pattern_test_set': 'plant.config.test*.tfrecord',
+    'image_shape': (299, 299, 3),
+    'items_to_descriptions': {''}
+}
+
 NUM_CLASS = 12
-CONFIG_USE = RESNET_50_TRAIN_CONFIG
+CONFIG_USE = INCEPTION_RESNET_TRAIN_CONFIG
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--batch_size", help="", default=196, type=int)
+parser.add_argument("--batch_size", help="", default=48, type=int)
 parser.add_argument("--num_epoch", help="", default=999, type=int)
 parser.add_argument(
     "--early_stopping_step", help="", default=100, type=int)
@@ -63,8 +74,10 @@ args = parser.parse_args()
 BATCH_SIZE_PER_REPLICA = int(args.batch_size / hvd.size())
 DATA_AUGMENTATION_TIMES_PER_REPLICA = int(8 / hvd.size())
 
+model = InceptionResnetV2()
+
 def test_augmented_acc(linear, y):
-    linear = build_model.build_test_time_vote(linear)
+    linear = build_test_time_vote(linear)
     test_correct_prediction = tf.equal(tf.squeeze(y), tf.argmax(linear, 1))
     test_accuracy_op = tf.reduce_mean(tf.cast(test_correct_prediction, tf.float32))
     confusion_matrix_op = tf.confusion_matrix(
@@ -104,13 +117,13 @@ def train():
 
     tf.summary.scalar("lambda_decay", lambda_decay)
 
-    linear, logits, trainable_var = build_model.build_resnet_v2_50(
+    linear, logits, trainable_var = model.build_model(
         x, y, NUM_CLASS, lambda_decay, is_training)
 
-    loss_op = build_model.build_loss(y, linear)
+    loss_op = model.build_loss(y, linear)
     tf.summary.scalar("total_loss", loss_op)
 
-    train_op = build_model.build_train_op(loss_op, trainable_var, global_step)
+    train_op = model.build_train_op(loss_op, global_step, trainable_var)
 
     for var in tf.global_variables():
         tf.summary.histogram(var.op.name, var)
@@ -123,7 +136,7 @@ def train():
         y, tf.argmax(linear, 1), num_classes=NUM_CLASS, dtype=tf.int32)
     x_test = tf.placeholder(tf.float32, shape=(None, CONFIG_USE['image_shape'][0],
         CONFIG_USE['image_shape'][1], CONFIG_USE['image_shape'][2]), name='x_test')
-    x_augmented = build_model.build_test_time_data_augmentation(x_test)
+    x_augmented = build_test_time_data_augmentation(x_test)
 
     session_config = tf.ConfigProto()
     session_config.gpu_options.allow_growth = True
@@ -175,7 +188,7 @@ def training_process(accuracy_op, global_step, image_batch, label_batch,
         CONFIG_USE['image_shape'][0:2],
         preprocessing='inception')
 
-    build_model.restore_pretrained_resnet_v2_50(session)
+    model.load_pretrained_weight('pretrained_model/inception_resnet_v2_2016_08_30.ckpt', session)
 
     early_stop_step = 0
     for i in range(num_epoch):

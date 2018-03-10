@@ -62,17 +62,16 @@ def gen_sample(label, image_path):
     """
     face_file_content = open(image_path, 'rb').read()
 
-    sample = tf.train.Example(
-        features=tf.train.Features(
-            feature={
-                'image_plant/format':
-                    bytes_feature(bytes("png", encoding="utf-8")),
-                #bytes_feature("png"),
-                'image_plant/encoded':
-                    bytes_feature(face_file_content),
-                'label':
-                    int64_feature(label),
-            }))
+    sample = tf.train.Example(features=tf.train.Features(
+        feature={
+            'image_plant/format':
+                bytes_feature(bytes("png", encoding="utf-8")),
+            #bytes_feature("png"),
+            'image_plant/encoded':
+                bytes_feature(face_file_content),
+            'label':
+                int64_feature(label),
+        }))
     return sample
 
 

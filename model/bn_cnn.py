@@ -234,8 +234,13 @@ def build_bn_cnn_8_crelu_with_dropout(image_batch, training):
 
     with tf.variable_scope(scope_name):
 
-        to_next_layer = tf.layers.dropout(image_batch, 0.1,
-            noise_shape=[tf.shape(image_batch)[0], 1, 1, tf.shape(image_batch)[3]],
+        to_next_layer = tf.layers.dropout(
+            image_batch,
+            0.1,
+            noise_shape=[
+                tf.shape(image_batch)[0], 1, 1,
+                tf.shape(image_batch)[3]
+            ],
             training=training,
             name='image_drop')
 
@@ -244,8 +249,13 @@ def build_bn_cnn_8_crelu_with_dropout(image_batch, training):
             image_batch, training, 1, num_filter=32,
             activation_fn=tf.nn.crelu)[0]
 
-        to_next_layer = tf.layers.dropout(to_next_layer, 0.1,
-            noise_shape=[tf.shape(to_next_layer)[0], 1, 1, tf.shape(to_next_layer)[3]],
+        to_next_layer = tf.layers.dropout(
+            to_next_layer,
+            0.1,
+            noise_shape=[
+                tf.shape(to_next_layer)[0], 1, 1,
+                tf.shape(to_next_layer)[3]
+            ],
             training=training,
             name='cnn_1_drop')
 
@@ -257,8 +267,13 @@ def build_bn_cnn_8_crelu_with_dropout(image_batch, training):
             num_filter=32,
             activation_fn=tf.nn.crelu)[0]
 
-        to_next_layer = tf.layers.dropout(to_next_layer, 0.1,
-            noise_shape=[tf.shape(to_next_layer)[0], 1, 1, tf.shape(to_next_layer)[3]],
+        to_next_layer = tf.layers.dropout(
+            to_next_layer,
+            0.1,
+            noise_shape=[
+                tf.shape(to_next_layer)[0], 1, 1,
+                tf.shape(to_next_layer)[3]
+            ],
             training=training,
             name='cnn_2_drop')
 
@@ -289,6 +304,7 @@ def build_bn_cnn_8_crelu_with_dropout(image_batch, training):
         flatten = tf.layers.flatten(to_next_layer, name='flatten')
 
     return flatten
+
 
 def build_bn_cnn_8_crelu(image_batch, training):
     """

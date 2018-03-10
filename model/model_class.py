@@ -46,17 +46,26 @@ def add_gradients_summaries(grads_and_vars):
 
 
 class ModelBase():
+
     def __init__(self):
         return
 
+    def get_preprocessing(self):
+        return 'inception'
 
-    def build_model(self, image_batch, target, num_class, lambda_decay, training):
+    def get_input_shape(self):
+        return (256, 256, 3)
+
+    def build_model(self, image_batch, target, num_class, lambda_decay,
+                    training):
         raise NotImplementedError()
         return
 
-
-    def build_train_op(self, loss, global_step, trainable=None,
-                   optimizer=tf.train.AdamOptimizer):
+    def build_train_op(self,
+                       loss,
+                       global_step,
+                       trainable=None,
+                       optimizer=tf.train.AdamOptimizer):
         optimizer = optimizer(learning_rate=0.001 * hvd.size())
         optimizer = hvd.DistributedOptimizer(optimizer)
 
@@ -66,48 +75,47 @@ class ModelBase():
             with tf.control_dependencies([tf.group(*update_ops)]):
                 grad_var = optimizer.compute_gradients(loss, var_list=trainable)
                 add_gradients_summaries(grad_var)
-                return optimizer.apply_gradients(grad_var,
-                                                 global_step=global_step)
+                return optimizer.apply_gradients(
+                    grad_var, global_step=global_step)
         else:
             grad_var = optimizer.compute_gradients(loss, var_list=trainable)
             add_gradients_summaries(grad_var)
             return optimizer.apply_gradients(grad_var, global_step=global_step)
-
 
     def build_loss(self, sparse_labels, unscaled_logits):
         reg_loss = tf.reduce_sum(tf.losses.get_regularization_losses())
 
         ce = tf.reduce_mean(
             tf.losses.sparse_softmax_cross_entropy(
-                sparse_labels, unscaled_logits,
+                sparse_labels,
+                unscaled_logits,
                 scope='softmax_cross_entropy_loss'))
 
         return reg_loss + ce
 
-
-    def load_pretrained_weight(self, file_name, session):
+    def load_pretrained_weight(self, session):
         return
-
 
     def restore_weight(self, file_name, session):
         return
 
-    def load_pretrained_scope_weight(self, file_name, include_scope, session):
+    def load_pretrained_scope_weight(self, file_name, include_scope,
+                                     exclude_scope, session):
         variables_to_restore = tf.contrib.framework.get_variables_to_restore(
-            include=[include_scope])
+            include=include_scope, exclude=exclude_scope)
         init_fn = tf.contrib.framework.assign_from_checkpoint_fn(
-            file_name, variables_to_restore,
-            ignore_missing_vars=True)
+            file_name, variables_to_restore, ignore_missing_vars=True)
         init_fn(session)
 
 
 class Cnn8CreluLsoftmax(ModelBase):
+
     def __init__(self):
-        super(Cnn8CreluLsoftmax, self).__init__()
+        ModelBase().__init__()
         return
 
-
-    def build_model(self, image_batch, target, num_class, lambda_decay, training):
+    def build_model(self, image_batch, target, num_class, lambda_decay,
+                    training):
         scope_name = "plant_seedings_cnn_8_crelu_classifier_with_lsoftmax"
 
         with tf.variable_scope(scope_name):
@@ -123,16 +131,20 @@ class Cnn8CreluLsoftmax(ModelBase):
 
 
 class Resnet50V2(ModelBase):
+
     def __init__(self):
-        super(Resnet50V2, self).__init__()
+        ModelBase().__init__()
         return
+
+    def get_input_shape(self):
+        return (224, 224, 3)
 
     def build_model(self, image_batch, target, num_class, lambda_decay,
                     training):
         with slim.arg_scope(
                 model.resnet_v2.resnet_arg_scope(batch_norm_decay=0.9)):
-            _, end_points = model.resnet_v2.resnet_v2_50(image_batch, 1001,
-                                                         is_training=training)
+            _, end_points = model.resnet_v2.resnet_v2_50(
+                image_batch, 1001, is_training=training)
             flatten = tf.layers.flatten(end_points['global_pool'])
 
         scope_name = "plant_seedings_build_resnet_v2_50_with_lsoftmax"
@@ -144,20 +156,25 @@ class Resnet50V2(ModelBase):
             logits = tf.nn.softmax(linear, name='softmax')
         return linear, logits, None
 
-    def load_pretrained_weight(self, file_name, session):
-        self.load_pretrained_scope_weight(file_name, "resnet_v2_50", session)
+    def load_pretrained_weight(self, session):
+        self.load_pretrained_scope_weight("pretrained_model/resnet_v2_50.ckpt",
+                                          ["resnet_v2_50"], None, session)
 
 
 class InceptionResnetV2(ModelBase):
+
     def __init__(self):
-        super(InceptionResnetV2, self).__init__()
+        ModelBase().__init__()
         return
+
+    def get_input_shape(self):
+        return (299, 299, 3)
 
     def build_model(self, image_batch, target, num_class, lambda_decay,
                     training):
         with slim.arg_scope(
                 model.inception_resnet_v2.inception_resnet_v2_arg_scope(
-                        batch_norm_decay=0.9)):
+                    batch_norm_decay=0.9)):
             _, end_points = model.inception_resnet_v2.inception_resnet_v2(
                 image_batch, 1001, training)
             flatten = tf.layers.flatten(end_points['global_pool'])
@@ -171,5 +188,7 @@ class InceptionResnetV2(ModelBase):
             logits = tf.nn.softmax(linear, name='softmax')
         return linear, logits, None
 
-    def load_pretrained_weight(self, file_name, session):
-        self.load_pretrained_scope_weight(file_name, "InceptionResnetV2", session)
+    def load_pretrained_weight(self, session):
+        self.load_pretrained_scope_weight(
+            'pretrained_model/inception_resnet_v2_2016_08_30.ckpt',
+            ["InceptionResnetV2"], None, session)

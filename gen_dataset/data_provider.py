@@ -27,15 +27,16 @@ DEFAULT_CONFIG = {
     'image_shape': (256, 256, 3),
     'items_to_descriptions': {''}
 }
-ShuffleBatchConfig = collections.namedtuple(
-    'ShuffleBatchConfig',
-    ['num_batching_threads', 'queue_capacity', 'min_after_dequeue'])
+ShuffleBatchConfig = collections.namedtuple('ShuffleBatchConfig', [
+    'num_batching_threads', 'queue_capacity', 'min_after_dequeue'
+])
 DEFAULT_SHUFFLE_CONFIG = ShuffleBatchConfig(
     num_batching_threads=8, queue_capacity=4000, min_after_dequeue=1000)
 
 _R_MEAN = 123.68
 _G_MEAN = 116.78
 _B_MEAN = 103.94
+
 
 def _mean_image_subtraction(image, means):
     """Subtracts the given means from each image channel.
@@ -63,6 +64,7 @@ def _mean_image_subtraction(image, means):
     for i in range(num_channels):
         channels[i] -= means[i]
     return tf.concat(axis=2, values=channels)
+
 
 def config_to_slim_dataset(config=None, dataset_dir=None):
     """
@@ -164,7 +166,10 @@ def slim_dataset_to_prefetch_queue(dataset, batch_size, shuffle=True):
     return slim.prefetch_queue.prefetch_queue([image_plant_batch, label_batch])
 
 
-def _read_and_decode(tfrecord_file_pattern, channel_num, image_size, preprocessing='inception'):
+def _read_and_decode(tfrecord_file_pattern,
+                     channel_num,
+                     image_size,
+                     preprocessing='inception'):
     """
     decode tfrecord samples from tfrecord file according file pattern
     decoded image will resize to image_size
@@ -194,11 +199,12 @@ def _read_and_decode(tfrecord_file_pattern, channel_num, image_size, preprocessi
     if preprocessing == 'vgg':
         img = tf.to_float(img)
         img = tf.image.resize_images(img, image_size)  # float32 [0, 1]
-        img = img * 255 #[0, 255]
+        img = img * 255  #[0, 255]
         img = _mean_image_subtraction(img, [_R_MEAN, _G_MEAN, _B_MEAN])
     else:
         img = tf.image.resize_images(img, image_size)  # float32 [0, 1]
-        img = tf.cast(img, tf.float32) * (1.0 / 255) * 2.0 - 1.0  #[-1, +1] float32
+        img = tf.cast(img, tf.float32) * (
+            1.0 / 255) * 2.0 - 1.0  #[-1, +1] float32
 
     return img, features['label']
 
@@ -259,7 +265,9 @@ def config_to_prefetch_queue(config=None,
     return train_queue, test_queue
 
 
-def tfrecord_file_to_nparray(tfrecord_file_name, image_size, preprocessing='inception'):
+def tfrecord_file_to_nparray(tfrecord_file_name,
+                             image_size,
+                             preprocessing='inception'):
     print('tfrecord_file_to_nparray preprocessing {0}'.format(preprocessing))
     record_iterator = tf.python_io.tf_record_iterator(tfrecord_file_name)
 

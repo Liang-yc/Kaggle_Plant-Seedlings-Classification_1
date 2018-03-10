@@ -197,21 +197,21 @@ def deform_conv2d(x, offset_shape, filter_shape, activation=None, scope=None):
     '''
     coord_h = tf.tile(
         tf.reshape(coord_h, [1, i_h, i_w, 1, 1]),
-        [batch * i_c, 1, 1, f_h, f_w
-        ])  # coords_h [batch*i_c, i_h, i_w, f_h, f_w)
+        [batch * i_c, 1, 1, f_h,
+         f_w])  # coords_h [batch*i_c, i_h, i_w, f_h, f_w)
     coord_w = tf.tile(
         tf.reshape(coord_w, [1, i_h, i_w, 1, 1]),
-        [batch * i_c, 1, 1, f_h, f_w
-        ])  # coords_w [batch*i_c, i_h, i_w, f_h, f_w)
+        [batch * i_c, 1, 1, f_h,
+         f_w])  # coords_w [batch*i_c, i_h, i_w, f_h, f_w)
 
     coord_fh = tf.tile(
         tf.reshape(coord_fh, [1, 1, 1, f_h, f_w]),
-        [batch * i_c, i_h, i_w, 1, 1
-        ])  # coords_fh [batch*i_c, i_h, i_w, f_h, f_w)
+        [batch * i_c, i_h, i_w, 1,
+         1])  # coords_fh [batch*i_c, i_h, i_w, f_h, f_w)
     coord_fw = tf.tile(
         tf.reshape(coord_fw, [1, 1, 1, f_h, f_w]),
-        [batch * i_c, i_h, i_w, 1, 1
-        ])  # coords_fw [batch*i_c, i_h, i_w, f_h, f_w)
+        [batch * i_c, i_h, i_w, 1,
+         1])  # coords_fw [batch*i_c, i_h, i_w, f_h, f_w)
 
     coord_h = coord_h + coord_fh + offset_map_h
     coord_w = coord_w + coord_fw + offset_map_w
@@ -288,9 +288,8 @@ def deform_conv2d(x, offset_shape, filter_shape, activation=None, scope=None):
     x_ip = tf.transpose(
         tf.reshape(x_ip, [i_c, batch, i_h, i_w, f_h, f_w]),
         [1, 2, 4, 3, 5, 0])  # [batch, i_h, f_h, i_w, f_w, i_c]
-    x_ip = tf.reshape(
-        x_ip,
-        [batch, i_h * f_h, i_w * f_w, i_c])  # [batch, i_h*f_h, i_w*f_w, i_c]
+    x_ip = tf.reshape(x_ip, [batch, i_h * f_h, i_w * f_w,
+                             i_c])  # [batch, i_h*f_h, i_w*f_w, i_c]
     with tf.variable_scope(scope or "deform_conv"):
         deform_conv = conv2d(
             x_ip,

@@ -10,7 +10,10 @@ import logging
 import tensorflow as tf
 from tensorflow.python.framework import ops
 from tensorflow.python.ops import clip_ops
-import horovod.tensorflow as hvd
+try:
+    import horovod.tensorflow as hvd
+except Exception as e:
+    print(e)
 
 import model.bn_cnn
 import model.l_softmax
@@ -97,6 +100,8 @@ class ModelBase():
         return
 
     def restore_weight(self, file_name, session):
+        saver = tf.train.Saver()
+        saver.restore(session, file_name)
         return
 
     def load_pretrained_scope_weight(self, file_name, include_scope,

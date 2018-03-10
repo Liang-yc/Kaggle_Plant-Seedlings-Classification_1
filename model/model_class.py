@@ -72,7 +72,6 @@ class ModelBase():
             grad_var = optimizer.compute_gradients(loss, var_list=trainable)
             add_gradients_summaries(grad_var)
             return optimizer.apply_gradients(grad_var, global_step=global_step)
-        return
 
 
     def build_loss(self, sparse_labels, unscaled_logits):
@@ -104,7 +103,7 @@ class ModelBase():
 
 class Cnn8CreluLsoftmax(ModelBase):
     def __init__(self):
-        ModelBase()
+        super(Cnn8CreluLsoftmax, self).__init__()
         return
 
 
@@ -125,7 +124,7 @@ class Cnn8CreluLsoftmax(ModelBase):
 
 class Resnet50V2(ModelBase):
     def __init__(self):
-        ModelBase()
+        super(Resnet50V2, self).__init__()
         return
 
     def build_model(self, image_batch, target, num_class, lambda_decay,
@@ -151,7 +150,7 @@ class Resnet50V2(ModelBase):
 
 class InceptionResnetV2(ModelBase):
     def __init__(self):
-        ModelBase()
+        super(InceptionResnetV2, self).__init__()
         return
 
     def build_model(self, image_batch, target, num_class, lambda_decay,

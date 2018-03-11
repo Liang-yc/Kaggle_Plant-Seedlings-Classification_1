@@ -119,3 +119,6 @@ model_weight
 /performance_log*
 model_weight_*
 pretrained_model/*
+ensemble_*
+submission
+

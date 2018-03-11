@@ -12,7 +12,7 @@ import numpy as np
 from PIL import Image
 import tensorflow as tf
 
-from model.model_class import InceptionResnetV2, Resnet50V2
+from model.model_class import InceptionResnetV2, Resnet50V2, Cnn8CreluLsoftmax, Cnn8CreluLsoftmax2, Cnn8Lsoftmax
 
 IndexToClass = {
     0: 'Black-grass',
@@ -48,7 +48,7 @@ def preprocess_files(size):
     return result
 
 def infer():
-    model = InceptionResnetV2()
+    model = Resnet50V2()
 
     x = tf.placeholder(
         tf.float32,
@@ -71,7 +71,7 @@ def infer():
     result = []
     with tf.Session(config=session_config) as session:
         session.run(tf.global_variables_initializer())
-        model.restore_weight('performance_log_01/inception_resnet/plant_seedings_classifier_0.9811_0.12606539.ckpt-80518', session)
+        model.restore_weight('performance_log_00/resnet_v2_50_with_lsoftmax/plant_seedings_classifier_0.9684_0.04231388.ckpt-29172', session)
 
         file_name_images = preprocess_files(model.get_input_shape()[0])
         for file_name, image in file_name_images:
@@ -86,6 +86,7 @@ def infer():
             print(line)
 
     with open('submission.csv', 'w') as submission:
+        submission.write('file,species\n')
         result.sort()
         submission.writelines(result)
 

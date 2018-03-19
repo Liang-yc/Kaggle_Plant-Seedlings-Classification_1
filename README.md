@@ -11,5 +11,7 @@ References -
 
 [2] https://github.com/jihunchoi/lsoftmax-pytorch/blob/master/lsoftmax.py
 
+[3] https://github.com/auroua/InsightFace_TF/blob/master/losses/face_losses.py
+
 - Data analysis
   - [image size distribution](https://www.kaggle.com/c/plant-seedlings-classification/discussion/45206)

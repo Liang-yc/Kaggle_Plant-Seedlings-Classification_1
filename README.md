@@ -10,3 +10,6 @@ References -
 [1] https://github.com/maestrojeong/deformable_convnet/blob/master/ops.py
 
 [2] https://github.com/jihunchoi/lsoftmax-pytorch/blob/master/lsoftmax.py
+
+- Data analysis
+  - [image size distribution](https://www.kaggle.com/c/plant-seedlings-classification/discussion/45206)

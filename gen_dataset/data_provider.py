@@ -198,11 +198,10 @@ def _read_and_decode(tfrecord_file_pattern,
 
     if preprocessing == 'vgg':
         img = tf.to_float(img)
-        img = tf.image.resize_images(img, image_size)  # float32 [0, 1]
-        img = img * 255  #[0, 255]
+        img = tf.image.resize_images(img, image_size)  # float32 [0, 255]
         img = _mean_image_subtraction(img, [_R_MEAN, _G_MEAN, _B_MEAN])
     else:
-        img = tf.image.resize_images(img, image_size)  # float32 [0, 1]
+        img = tf.image.resize_images(img, image_size)  # float32 [0, 255]
         img = tf.cast(img, tf.float32) * (
             1.0 / 255) * 2.0 - 1.0  #[-1, +1] float32
 
